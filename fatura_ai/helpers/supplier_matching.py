@@ -5,88 +5,81 @@
 import frappe
 from frappe import _
 from typing import Dict, Any, Optional
+import difflib
 
 
 CONFIDENCE_EXACT = 1.0
-CONFIDENCE_FUZZY_MIN = 0.6  # below this we escalate to AI tier
+CONFIDENCE_FUZZY_MIN = 0.85  # threshold for difflib
 
 
-def find_supplier(
-    vat_number: Optional[str] = None,
-    supplier_name: Optional[str] = None,
-) -> Dict[str, Any]:
+def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
     """
-    Run the 3-tier matching pipeline and return a match dict.
-    Keys: supplier, method, confidence, candidates (for disambiguation UI)
+    Tier 1 — exact match on tax_id field.
+    المستوى الأول — تطابق تام على حقل الرقم الضريبي
     """
-    if vat_number:
-        result = _match_by_vat(vat_number)
-        if result:
-            return result
-
-    if supplier_name:
-        result = _match_by_fuzzy_name(supplier_name)
-        if result:
-            return result
-
-    return _match_by_ai(supplier_name, vat_number)
-
-
-def _match_by_vat(vat_number: str) -> Optional[Dict[str, Any]]:
-    """Tier 1 — exact match on tax_id field."""
-    supplier = frappe.db.get_value("Supplier", {"tax_id": vat_number}, "name")
-    if not supplier:
-        return None
-    return {"supplier": supplier, "method": "Exact VAT", "confidence": CONFIDENCE_EXACT}
-
-
-def _match_by_fuzzy_name(supplier_name: str) -> Optional[Dict[str, Any]]:
-    """Tier 2 — rapidfuzz WRatio on all supplier names."""
-    from rapidfuzz import process, fuzz
-
-    suppliers = frappe.db.get_all("Supplier", fields=["name", "supplier_name"])
+    suppliers = frappe.get_all(
+        "Supplier",
+        filters={"tax_id": tax_id},
+        fields=["name", "supplier_name"],
+        limit=1,
+    )
     if not suppliers:
         return None
+    s = suppliers[0]
+    return {
+        "supplier": s["name"],
+        "supplier_name": s["supplier_name"],
+        "confidence": "high",
+        "tier": 1,
+    }
 
-    choices = {s["name"]: s["supplier_name"] for s in suppliers}
-    best = process.extractOne(
-        supplier_name,
-        choices,
-        scorer=fuzz.WRatio,
-        score_cutoff=int(CONFIDENCE_FUZZY_MIN * 100),
-    )
-    if not best:
+
+def match_by_name(name: str) -> Optional[Dict[str, Any]]:
+    """
+    Tier 2 — fuzzy name matching using difflib.
+    المستوى الثاني — مطابقة تقريبية لاسم المورد باستخدام difflib
+    """
+    all_suppliers = frappe.get_all("Supplier", fields=["name", "supplier_name"])
+    if not all_suppliers:
         return None
 
-    name, score, key = best
-    return {
-        "supplier": key,
-        "method": "Fuzzy Name",
-        "confidence": round(score / 100, 3),
-    }
+    names = [s["supplier_name"] or s["name"] for s in all_suppliers]
+    matches = difflib.get_close_matches(name, names, n=1, cutoff=CONFIDENCE_FUZZY_MIN)
+    if not matches:
+        return None
+
+    best_name = matches[0]
+    for s in all_suppliers:
+        candidate = s["supplier_name"] or s["name"]
+        if candidate == best_name:
+            return {
+                "supplier": s["name"],
+                "supplier_name": s["supplier_name"],
+                "confidence": "medium",
+                "tier": 2,
+            }
+    return None
 
 
-def _match_by_ai(supplier_name: Optional[str], vat_number: Optional[str]) -> Dict[str, Any]:
+def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
     """
-    Tier 3 — return top candidates for user disambiguation.
-    Full AI call implemented in T005.
+    Run the 3-tier matching pipeline.
+    تشغيل سلسلة المطابقة ثلاثية المستويات
     """
-    # TODO (T005): call AI disambiguation endpoint
-    candidates = _get_top_candidates(supplier_name)
+    # Tier 1 — exact tax_id
+    result = match_by_tax_id(tax_id)
+    if result:
+        return result
+
+    # Tier 2 — fuzzy name
+    result = match_by_name(name)
+    if result:
+        return result
+
+    # Tier 3 — AI disambiguation (placeholder)
     return {
         "supplier": None,
-        "method": "AI Disambiguation",
-        "confidence": 0.0,
-        "candidates": candidates,
+        "supplier_name": None,
+        "confidence": "low",
+        "tier": 3,
     }
-
-
-def _get_top_candidates(query: Optional[str], limit: int = 5):
-    """Return top supplier name candidates for the disambiguation dialog."""
-    if not query:
-        return []
-    from rapidfuzz import process, fuzz
-    suppliers = frappe.db.get_all("Supplier", fields=["name", "supplier_name"])
-    choices = {s["name"]: s["supplier_name"] for s in suppliers}
-    results = process.extract(query, choices, scorer=fuzz.WRatio, limit=limit)
-    return [{"supplier": key, "name": name, "score": round(score / 100, 3)} for name, score, key in results]
