@@ -4,14 +4,13 @@
 
 ## 🔴 In Progress
 
+- [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
+
 ## 📋 Backlog
 
 ### P0 — Must have for v1
 
-- [T002] Implement FaturaSettings DocType logic (validation, API key storage) | aider | P0 | TODO | T001
-- [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
-- [T004] Implement AI extraction module — OpenAI provider | opencode | P0 | DONE | T001
-- [T005] Implement 3-tier supplier matching logic (fatura_ai/supplier_matching.py) | aider | P0 | TODO | T001
+- [T005] Implement 3-tier supplier matching logic (fatura_ai/supplier_matching.py) | aider | P0 | DONE | T001
 - [T006] Implement 3-tier item matching logic (fatura_ai/item_matching.py) | opencode | P0 | TODO | T001
 - [T007] Build 5-step wizard — Step 1: File Upload UI (JS + Python endpoint) | aider | P0 | TODO | T001
 - [T008] Build 5-step wizard — Step 2: AI Extraction preview UI | opencode | P0 | TODO | T007
@@ -31,14 +30,13 @@
 
 ### P2 — Nice to have
 
-- [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 - [T020] Performance: batch item matching caching | aider | P2 | TODO | T006
 
 ## ✅ Done
 
 <!-- Move tasks here when committed and tested -->
 - [T001] Scaffold Frappe app structure + DocTypes | claude-code | P0 | DONE | none
-- [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
+- [T002] Implement FaturaSettings DocType logic (validation, API key storage) | aider | P0 | DONE | T001
 - [T004] Implement AI extraction module — OpenAI provider | opencode | P0 | DONE | T001
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 
