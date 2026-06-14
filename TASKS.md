@@ -5,7 +5,6 @@
 ## 🔴 In Progress
 
 - [T006] Implement 3-tier item matching logic (fatura_ai/item_matching.py) | opencode | P0 | IN_PROGRESS | T001
-- [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | IN_PROGRESS | T001
 
 ## 📋 Backlog
 
@@ -38,6 +37,7 @@
 - [T004] Implement AI extraction module — OpenAI provider | opencode | P0 | DONE | T001
 - [T005] Implement 3-tier supplier matching logic (fatura_ai/supplier_matching.py) | aider | P0 | DONE | T001
 - [T007] Build 5-step wizard — Step 1: File Upload UI (JS + Python endpoint) | aider | P0 | DONE | T001
+- [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | DONE | T001
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 
 ## 🚫 Blocked
