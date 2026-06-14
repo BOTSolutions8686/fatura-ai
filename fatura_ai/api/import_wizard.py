@@ -33,34 +33,53 @@ def upload_invoice(file_url, source_doctype, source_docname):
 
 @frappe.whitelist()
 def run_extraction(log_name):
-    """Kick off AI extraction for the uploaded file. Returns raw extracted data."""
+    """Fetch log, run AI extraction, update log fields, return log as dict."""
     log = frappe.get_doc("Fatura Import Log", log_name)
-    log.status = "Processing"
-    log.save(ignore_permissions=True)
+    if not log:
+        frappe.throw(_("Import log not found: {0}").format(log_name))
 
-    from fatura_ai.helpers.ai_extraction import extract_invoice_data
-    result = extract_invoice_data(log.file_url)
+    # Get attached file path
+    file_doc = frappe.get_doc("File", {"file_url": log.file_url})
+    if not file_doc:
+        frappe.throw(_("Attached file not found"))
+    file_path = file_doc.get_full_path()
+    if not file_path:
+        frappe.throw(_("Could not resolve file path"))
 
+    # Run AI extraction
+    from fatura_ai.helpers.ai_extraction import extract_invoice
+    result = extract_invoice(file_path)
+
+    # Update log fields
+    log.vendor_name = result.get("vendor_name")
+    log.invoice_number = result.get("invoice_number")
+    log.invoice_date = result.get("invoice_date")
+    log.line_items = frappe.as_json(result.get("line_items", []))
+    log.subtotal = result.get("subtotal")
+    log.vat_amount = result.get("vat_amount")
+    log.total = result.get("total")
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
+    log.status = "Extracted"
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
-    return result
+    return log.as_dict()
 
 
 # ── Step 2: Supplier Matching ───────────────────────────────────────────────
 
 @frappe.whitelist()
-def match_supplier(log_name):
-    """Run 3-tier supplier matching on extracted data."""
+def match_supplier(log_name, vendor_name=None, tax_id=None):
+    """Run 3-tier supplier matching using vendor_name and tax_id."""
     log = frappe.get_doc("Fatura Import Log", log_name)
-    extracted = frappe.parse_json(log.extracted_json or "{}")
+    if not log:
+        frappe.throw(_("Import log not found: {0}").format(log_name))
 
-    from fatura_ai.helpers.supplier_matching import find_supplier
-    match = find_supplier(
-        vat_number=extracted.get("supplier_vat"),
-        supplier_name=extracted.get("supplier_name"),
+    from fatura_ai.helpers.supplier_matching import find_supplier_match
+    match = find_supplier_match(
+        vendor_name=vendor_name,
+        tax_id=tax_id,
     )
 
     log.supplier_match_method = match.get("method")
