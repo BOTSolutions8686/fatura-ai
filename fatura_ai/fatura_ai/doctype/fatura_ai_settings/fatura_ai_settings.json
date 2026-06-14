@@ -1,0 +1,144 @@
+{
+ "actions": [],
+ "creation": "2026-06-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_api",
+  "api_provider",
+  "column_break_1",
+  "enable_debug",
+  "section_break_anthropic",
+  "anthropic_api_key",
+  "anthropic_model",
+  "section_break_openai",
+  "openai_api_key",
+  "openai_model",
+  "section_break_google",
+  "google_api_key",
+  "google_model",
+  "section_break_matching",
+  "fuzzy_match_threshold",
+  "column_break_2",
+  "enable_item_learning"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_api",
+   "fieldtype": "Section Break",
+   "label": "API Configuration"
+  },
+  {
+   "default": "Anthropic",
+   "fieldname": "api_provider",
+   "fieldtype": "Select",
+   "label": "Default AI Provider",
+   "options": "Anthropic\nOpenAI\nGoogle",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_debug",
+   "fieldtype": "Check",
+   "label": "Enable Debug Logging"
+  },
+  {
+   "fieldname": "section_break_anthropic",
+   "fieldtype": "Section Break",
+   "label": "Anthropic"
+  },
+  {
+   "fieldname": "anthropic_api_key",
+   "fieldtype": "Password",
+   "label": "Anthropic API Key"
+  },
+  {
+   "default": "claude-sonnet-4-6",
+   "fieldname": "anthropic_model",
+   "fieldtype": "Data",
+   "label": "Anthropic Model"
+  },
+  {
+   "fieldname": "section_break_openai",
+   "fieldtype": "Section Break",
+   "label": "OpenAI"
+  },
+  {
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key"
+  },
+  {
+   "default": "gpt-4o",
+   "fieldname": "openai_model",
+   "fieldtype": "Data",
+   "label": "OpenAI Model"
+  },
+  {
+   "fieldname": "section_break_google",
+   "fieldtype": "Section Break",
+   "label": "Google"
+  },
+  {
+   "fieldname": "google_api_key",
+   "fieldtype": "Password",
+   "label": "Google API Key"
+  },
+  {
+   "default": "gemini-1.5-flash",
+   "fieldname": "google_model",
+   "fieldtype": "Data",
+   "label": "Google Model"
+  },
+  {
+   "fieldname": "section_break_matching",
+   "fieldtype": "Section Break",
+   "label": "Matching & Learning"
+  },
+  {
+   "default": "0.8",
+   "fieldname": "fuzzy_match_threshold",
+   "fieldtype": "Float",
+   "label": "Fuzzy Match Threshold (0–1)"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_item_learning",
+   "fieldtype": "Check",
+   "label": "Enable Item Learning"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fatura AI",
+ "name": "Fatura AI Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

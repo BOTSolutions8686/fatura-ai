@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-06-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "original_text",
+  "matched_item",
+  "column_break_1",
+  "supplier",
+  "section_break_stats",
+  "confidence_score",
+  "times_used",
+  "column_break_stats",
+  "last_used"
+ ],
+ "fields": [
+  {
+   "fieldname": "original_text",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Original Invoice Text",
+   "reqd": 1
+  },
+  {
+   "fieldname": "matched_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Matched ERPNext Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "section_break_stats",
+   "fieldtype": "Section Break",
+   "label": "Usage Statistics"
+  },
+  {
+   "default": "0.0",
+   "fieldname": "confidence_score",
+   "fieldtype": "Float",
+   "label": "Confidence Score (0–1)"
+  },
+  {
+   "default": "0",
+   "fieldname": "times_used",
+   "fieldtype": "Int",
+   "label": "Times Used"
+  },
+  {
+   "fieldname": "column_break_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_used",
+   "fieldtype": "Date",
+   "label": "Last Used"
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fatura AI",
+ "name": "Invoice AI Item Map",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

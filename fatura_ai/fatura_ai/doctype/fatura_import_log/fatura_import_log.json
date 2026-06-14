@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "autoname": "format:FLOG-{YYYY}-{MM}-{#####}",
+ "creation": "2026-06-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "status",
+  "import_date",
+  "column_break_header",
+  "provider_used",
+  "section_break_source",
+  "source_doctype",
+  "source_docname",
+  "column_break_file",
+  "file_url",
+  "section_break_supplier",
+  "supplier_match_method",
+  "matched_supplier",
+  "column_break_supplier",
+  "supplier_confidence",
+  "section_break_items",
+  "items_count",
+  "items_matched",
+  "column_break_items",
+  "processing_time",
+  "section_break_data",
+  "extracted_json",
+  "section_break_error",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nProcessing\nSuccess\nPartial\nFailed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "import_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Import Date"
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "provider_used",
+   "fieldtype": "Data",
+   "label": "AI Provider Used"
+  },
+  {
+   "fieldname": "section_break_source",
+   "fieldtype": "Section Break",
+   "label": "Source Document"
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Select",
+   "label": "Source DocType",
+   "options": "Purchase Invoice\nPurchase Order"
+  },
+  {
+   "fieldname": "source_docname",
+   "fieldtype": "Dynamic Link",
+   "label": "Source Document",
+   "options": "source_doctype"
+  },
+  {
+   "fieldname": "column_break_file",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "file_url",
+   "fieldtype": "Data",
+   "label": "Uploaded File URL"
+  },
+  {
+   "fieldname": "section_break_supplier",
+   "fieldtype": "Section Break",
+   "label": "Supplier Matching"
+  },
+  {
+   "fieldname": "supplier_match_method",
+   "fieldtype": "Select",
+   "label": "Match Method",
+   "options": "\nExact VAT\nFuzzy Name\nAI Disambiguation\nManual"
+  },
+  {
+   "fieldname": "matched_supplier",
+   "fieldtype": "Link",
+   "label": "Matched Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "column_break_supplier",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supplier_confidence",
+   "fieldtype": "Float",
+   "label": "Supplier Confidence (0–1)"
+  },
+  {
+   "fieldname": "section_break_items",
+   "fieldtype": "Section Break",
+   "label": "Item Statistics"
+  },
+  {
+   "default": "0",
+   "fieldname": "items_count",
+   "fieldtype": "Int",
+   "label": "Total Items on Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "items_matched",
+   "fieldtype": "Int",
+   "label": "Items Matched"
+  },
+  {
+   "fieldname": "column_break_items",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "processing_time",
+   "fieldtype": "Float",
+   "label": "Processing Time (s)"
+  },
+  {
+   "fieldname": "section_break_data",
+   "fieldtype": "Section Break",
+   "label": "Raw Extraction Data"
+  },
+  {
+   "fieldname": "extracted_json",
+   "fieldtype": "Code",
+   "label": "Extracted JSON",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "section_break_error",
+   "fieldtype": "Section Break",
+   "label": "Error Details"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message"
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fatura AI",
+ "name": "Fatura Import Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Purchase User",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
