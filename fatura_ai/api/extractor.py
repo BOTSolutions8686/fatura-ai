@@ -8,7 +8,7 @@ from frappe import _
 from fatura_ai.helpers.ai_extraction import get_active_provider
 
 
-ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif"}
 MAX_FILE_SIZE_MB = 20
 
 
