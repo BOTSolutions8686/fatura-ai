@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from abc import ABC, abstractmethod
 from typing import Dict, Any
+from fatura_ai.api.providers.deepseek_provider import DeepSeekProvider
 
 
 # ── Abstract base ────────────────────────────────────────────────────────────
@@ -82,6 +83,11 @@ def get_active_provider() -> BaseExtractionProvider:
         return GoogleProvider(
             api_key=settings.get_password("google_api_key"),
             model=settings.google_model or "gemini-1.5-flash",
+        )
+    if provider_name == "DeepSeek":
+        return DeepSeekProvider(
+            api_key=settings.get_password("deepseek_api_key"),
+            model=settings.deepseek_model or "deepseek-chat",
         )
     frappe.throw(_("Unknown AI provider: {0}").format(provider_name))
 
