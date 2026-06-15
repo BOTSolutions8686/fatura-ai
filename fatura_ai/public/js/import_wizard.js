@@ -26,10 +26,12 @@ window.FaturaWizard = class FaturaWizard {
 		this.dialog = new frappe.ui.Dialog({
 			title: __("Import Invoice — فاتورة AI"),
 			size: "large",
-			fields: this._get_step_fields(0),
+			fields: this._get_step_fields(),
+			primary_action_label: __("Upload & Extract"),
+			primary_action: () => this._do_upload(),
 		});
-		this._render_step(0);
 		this.dialog.show();
+		this._render_step(0);
 	}
 
 	// ── Step navigation ──────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ window.FaturaWizard = class FaturaWizard {
 
 	_render_upload() {
 		this.dialog.set_primary_action(__("Upload & Extract"), () => this._do_upload());
-		this.dialog.set_secondary_action(__("Cancel"), () => this.dialog.hide());
+		// Dialog already has a built-in X close button — no secondary needed
 	}
 
 	_do_upload() {
@@ -83,7 +85,6 @@ window.FaturaWizard = class FaturaWizard {
 	// ── Step 1: AI Extraction ────────────────────────────────────────────────
 
 	_render_extraction() {
-		this.dialog.set_primary_action(__(""), () => {});
 		this.dialog.get_primary_btn().hide();
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.run_extraction",
@@ -102,7 +103,6 @@ window.FaturaWizard = class FaturaWizard {
 	_render_supplier() {
 		this.dialog.get_primary_btn().show();
 		this.dialog.set_primary_action(__("Confirm Supplier"), () => this._do_confirm_supplier());
-		this.dialog.set_secondary_action(__("Back"), () => this._go_to(0));
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.match_supplier",
 			args: { log_name: this.log_name },
@@ -113,7 +113,6 @@ window.FaturaWizard = class FaturaWizard {
 	}
 
 	_show_supplier_match(match) {
-		// Rendered by step HTML; update dialog fields with match result
 		this.dialog.set_value("matched_supplier", match.supplier || "");
 		this.dialog.set_value("supplier_confidence", match.confidence || 0);
 	}
@@ -131,7 +130,6 @@ window.FaturaWizard = class FaturaWizard {
 
 	_render_items() {
 		this.dialog.set_primary_action(__("Confirm Items"), () => this._do_confirm_items());
-		this.dialog.set_secondary_action(__("Back"), () => this._go_to(2));
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.match_items",
 			args: { log_name: this.log_name },
@@ -156,7 +154,6 @@ window.FaturaWizard = class FaturaWizard {
 
 	_render_review() {
 		this.dialog.set_primary_action(__("Import to Document"), () => this._do_populate());
-		this.dialog.set_secondary_action(__("Back"), () => this._go_to(3));
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.get_review_summary",
 			args: { log_name: this.log_name },
@@ -214,10 +211,9 @@ window.FaturaWizard = class FaturaWizard {
 		}).join(" › ");
 	}
 
-	_get_step_fields(step) {
-		// Minimal field scaffold — full field definitions in T007–T011
+	_get_step_fields() {
 		return [
-			{ fieldtype: "HTML", fieldname: "step_html", options: this._step_html(step) },
+			{ fieldtype: "HTML", fieldname: "step_html", options: this._step_html(0) },
 			{ fieldtype: "Attach", fieldname: "file_url", label: __("Invoice File (PDF / Image)") },
 			{ fieldtype: "Link", fieldname: "matched_supplier", label: __("Matched Supplier"), options: "Supplier" },
 			{ fieldtype: "Float", fieldname: "supplier_confidence", label: __("Confidence"), read_only: 1 },
