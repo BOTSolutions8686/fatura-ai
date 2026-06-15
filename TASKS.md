@@ -6,7 +6,52 @@
 <!-- none -->
 
 ## 📋 Backlog
-<!-- Sprint complete. Awaiting new tasks from Talha. -->
+
+## Sprint 5 — Image Invoice Support (OCR + Vision AI)
+
+**Goal:** Handle invoices that are images (JPG/PNG uploaded directly) or image-based PDFs (scanned documents with no text layer). The ZATCA QR code path already handles most Saudi e-invoices, but older or foreign invoices may have no QR and no extractable text.
+
+### T042 — Accept image file uploads in wizard
+- Allow JPG, PNG, WEBP uploads in addition to PDF
+- If image uploaded: convert to single-page PDF using `pdf2image`/`Pillow` before processing, OR process as image directly
+- Update file validation in `run_ai_extraction` to accept image MIME types
+- Show appropriate label in wizard: "Invoice image uploaded"
+
+### T043 — Vision AI extraction for image invoices
+- When `pdf_type == "image"` (detected by `pdf_extractor.detect_pdf_type`), skip text extraction
+- Instead: convert PDF page(s) to image(s) using `pdf2image.convert_from_path`
+- Pass image(s) to AI vision model for structured extraction
+- Provider priority: Gemini Vision (gemini-1.5-flash has vision) → GPT-4V → Anthropic Claude Vision
+- Prompt: same structured extraction prompt as text, but passed as image message content
+- Return same `extracted_json` schema so the rest of the pipeline is unchanged
+
+### T044 — Tesseract OCR fallback
+- If vision AI is not configured or fails, run Tesseract OCR on the image pages
+- Install: `apt-get install tesseract-ocr tesseract-ocr-ara` (Arabic + English)
+- Use `pytesseract.image_to_string(image, lang='ara+eng')`
+- Pass OCR text to existing text-based AI extraction prompt
+- This is lower accuracy than vision AI but works without an API key
+
+### T045 — Image quality warning
+- Before attempting OCR/vision extraction on a scanned image, check resolution
+- If DPI < 150: show warning in wizard "Image resolution may be too low for accurate extraction. Results may be incomplete."
+- Log `pdf_quality: "low"/"ok"/"high"` in extracted_json
+
+### T046 — Batch import (multiple invoices)
+- Allow uploading multiple PDFs at once (file input with `multiple` attribute)
+- Process each in sequence, show a progress list: filename | status | supplier | PI number
+- Failed ones can be retried individually
+- This is a new wizard mode: "Batch Import" vs "Single Import"
+
+### T047 — Email-triggered import (bonus)
+- Monitor a designated email inbox (configurable in Fatura AI Settings)
+- When an invoice PDF is received as attachment, auto-trigger extraction and save as Draft FaturaImportLog
+- User reviews and confirms from the Import History list view
+- Requires email MCP or Frappe email configuration
+
+**Priority order:** T042 → T043 → T044 → T045 → T046 → T047
+**Start with:** T042 + T043 (these unlock image invoices end-to-end)
+**Dependencies:** T043 requires at least one vision-capable AI provider configured
 
 ## 🚫 Blocked
 
