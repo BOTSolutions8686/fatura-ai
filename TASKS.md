@@ -1,14 +1,14 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 09:30 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 10:00 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
 - [T016] Write unit tests for AI extraction | aider | P1 | IN_PROGRESS | T003,T004
 - [T020] Performance: batch item matching caching | aider | P2 | IN_PROGRESS | T006
 - [T013] Write Arabic translations for all strings | opencode | P1 | IN_PROGRESS | T007
+- [T022] Fix COR-1 (None tax_id guard) + COR-2 (items vs line_items key) | aider | P1 | IN_PROGRESS | T021
 
 ## 📋 Backlog
-- [T022] Fix COR-1 (None tax_id guard) + COR-2 (items vs line_items key) | aider | P1 | BACKLOG | T021
 - [T023] Fix SEC-1/SEC-2 (missing frappe.has_permission on whitelist endpoints) | aider | P1 | BACKLOG | T021
 
 ## ✅ Done
