@@ -86,11 +86,8 @@ def match_supplier(log_name, vendor_name=None, tax_id=None):
             _("Cannot match supplier: no name or VAT in extracted data")
         )
 
-    from fatura_ai.helpers.supplier_matching import find_supplier
-    match = find_supplier(
-        supplier_name=vendor_name,
-        vat_number=tax_id,
-    )
+    from fatura_ai.helpers.supplier_matching import match_supplier
+    match = match_supplier(tax_id=tax_id, name=vendor_name)
 
     log.supplier_match_method = match.get("method")
     log.matched_supplier = match.get("supplier")
@@ -203,7 +200,7 @@ def confirm_import(log_name):
     payload = _build_doctype_payload(log, extracted)
 
     # Create the document
-    doc = frappe.new_doc("Purchase Invoice")
+    doc = frappe.new_doc(log.source_doctype)
     doc.supplier = payload.get("supplier")
     doc.bill_no = payload.get("bill_no")
     doc.bill_date = payload.get("bill_date")

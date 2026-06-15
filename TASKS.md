@@ -1,19 +1,18 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 06:10 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 09:15 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-
 - [T016] Write unit tests for AI extraction | aider | P1 | IN_PROGRESS | T003,T004
 - [T020] Performance: batch item matching caching | aider | P2 | IN_PROGRESS | T006
-- [T013] Write Arabic translations for all __()/()'s strings | opencode | P1 | IN_PROGRESS | T007
+- [T013] Write Arabic translations for all __()/() strings | opencode | P1 | IN_PROGRESS | T007
+- [T021] Fix P0 bugs BUG-1/BUG-2/BUG-3 in import_wizard.py | opencode | P0 | IN_PROGRESS | T018
 
 ## 📋 Backlog
-
-<!-- empty -->
+- [T022] Fix COR-1 (None tax_id guard) + COR-2 (items vs line_items key) | aider | P1 | BACKLOG | T021
+- [T023] Fix SEC-1/SEC-2 (missing frappe.has_permission on whitelist endpoints) | aider | P1 | BACKLOG | T021
 
 ## ✅ Done
-
 - [T001] Scaffold Frappe app structure + DocTypes | claude-code | P0 | DONE | none
 - [T002] Implement FaturaSettings DocType logic (validation, API key storage) | aider | P0 | DONE | T001
 - [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
