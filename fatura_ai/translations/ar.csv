@@ -1,0 +1,19 @@
+source,target
+Fatura AI,فاتورة ذكاء اصطناعي
+Settings,الإعدادات
+Configure AI provider and matching thresholds,تكوين مزود الذكاء الاصطناعي وعتبات المطابقة
+Import Logs,سجلات الاستيراد
+View history of AI invoice imports,عرض سجل استيراد فواتير الذكاء الاصطناعي
+Item Mappings,تعيينات الأصناف
+Learned invoice text → ERPNext item mappings,تعيينات نص الفاتورة إلى أصناف ERPNext
+Unsupported file type: {0}. Allowed: PDF\, PNG\, JPG\, WEBP,نوع الملف غير مدعوم: {0}. المسموح: PDF\, PNG\, JPG\, WEBP
+AI extraction failed: {0},فشل استخراج الذكاء الاصطناعي: {0}
+Cannot match supplier: no name or VAT in extracted data,لا يمكن مطابقة المورد: لا يوجد اسم أو رقم ضريبي
+Supplier {0} not found,المورد {0} غير موجود
+This import has already been completed. Open {0}.,تم الاستيراد مسبقًا. افتح {0}.
+ksa_compliance is not installed — ZATCA fields were skipped.,ksa_compliance غير مثبت — تم تخطي حقول ZATCA.
+Invalid source doctype: {0},نوع المستند غير صالح: {0}
+Unknown AI provider: {0},مزود الذكاء غير معروف: {0}
+Anthropic extraction not yet implemented,استخراج Anthropic غير مطبق بعد
+OpenAI extraction not yet implemented,استخراج OpenAI غير مطبق بعد
+Google extraction not yet implemented,استخراج Google غير مطبق بعد
