@@ -158,7 +158,7 @@ def create_supplier(log_name, supplier_name, tax_id=None):
     if not existing and tax_id:
         existing = frappe.db.get_value("Supplier", {"tax_id": tax_id}, "name")
     if existing:
-        _update_log_supplier(log_name, existing, "Auto-Created")
+        _update_log_supplier(log_name, existing, "Manual")
         return {"supplier": existing, "status": "existing"}
 
     doc = frappe.get_doc({
@@ -172,7 +172,7 @@ def create_supplier(log_name, supplier_name, tax_id=None):
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
 
-    _update_log_supplier(log_name, doc.name, "Auto-Created")
+    _update_log_supplier(log_name, doc.name, "Manual")
     return {"supplier": doc.name, "status": "created"}
 
 
