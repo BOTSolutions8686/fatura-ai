@@ -197,7 +197,7 @@ window.FaturaWizard = class FaturaWizard {
 	}
 
 	_pdf_type_banner() {
-		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		const extracted = JSON.parse(this.extracted?.extracted_json || "{}") || {};
 		if (extracted.pdf_type !== "image") return "";
 		return `<div style="background:#fef3c7; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#92400e;">
 			⚠️ ${__("This invoice appears to be image-based. Extraction accuracy may be lower. QR code data (if present) is used as the primary source.")}
@@ -269,7 +269,7 @@ window.FaturaWizard = class FaturaWizard {
 	// T029 — VAT matched multiple suppliers; let user pick one
 	_show_vat_ambiguous(match) {
 		this.dialog.set_primary_action(__("Confirm Supplier"), () => this._do_confirm_supplier());
-		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		const extracted = JSON.parse(this.extracted?.extracted_json || "{}") || {};
 		const vendor = extracted.vendor_name || (this.extracted || {}).vendor_name || "—";
 		const candidates = match.candidates || [];
 		const rows = candidates.map((c, i) => `
@@ -301,7 +301,7 @@ window.FaturaWizard = class FaturaWizard {
 	// T028 — no supplier found; offer search or auto-create from extracted data
 	_show_supplier_autocreate(match) {
 		this.dialog.get_primary_btn().hide();
-		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		const extracted = JSON.parse(this.extracted?.extracted_json || "{}") || {};
 		const vendor = extracted.vendor_name || extracted.seller_name || extracted.supplier_name || "";
 		const tax_id = extracted.tax_id || extracted.vat_number || extracted.seller_vat || "";
 		const qr_badge = extracted.qr_data_found
