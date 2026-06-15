@@ -240,7 +240,7 @@ def get_review_summary(log_name):
 # ── Step 5: Create Document ─────────────────────────────────────────────────
 
 @frappe.whitelist()
-def confirm_import(log_name):
+def confirm_import(log_name, force=False):
     """
     Create a Draft Purchase Invoice / PO from the extracted + confirmed data.
     NEVER submits the document — only creates a Draft.
@@ -249,55 +249,22 @@ def confirm_import(log_name):
     frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
-    # Guard against double-import
     if log.status == "Success":
-        frappe.throw(
-            _("This import has already been completed.")
-        )
+        frappe.throw(_("This import has already been completed."))
 
     extracted = frappe.parse_json(log.extracted_json or "{}")
     confirmed_items = extracted.get("confirmed_items") or extracted.get("line_items", [])
 
+    # T030 — duplicate detection (skipped when user explicitly forces)
+    if not frappe.utils.cint(force):
+        dup = _check_duplicate(log, extracted)
+        if dup:
+            return dup
+
     from fatura_ai.api.extractor import build_doctype_payload
     payload = build_doctype_payload(log, extracted, confirmed_items)
-
-    # Create the document
-    doc = frappe.new_doc(log.source_doctype or "Purchase Invoice")
-    doc.supplier = payload.get("supplier")
-    doc.bill_no = payload.get("bill_no")
-    doc.bill_date = payload.get("bill_date")
-    doc.due_date = payload.get("due_date")
-
-    for item_data in payload.get("items", []):
-        item_code = item_data.get("item_code")
-        if not item_code:
-            continue
-        # Auto-create item if it doesn't exist in ERPNext
-        if not frappe.db.exists("Item", item_code):
-            new_item = frappe.get_doc({
-                "doctype": "Item",
-                "item_code": item_code,
-                "item_name": (item_data.get("description") or item_code)[:140],
-                "item_group": "All Item Groups",
-                "stock_uom": "Nos",
-                "is_stock_item": 0,
-                "is_purchase_item": 1,
-            })
-            new_item.insert(ignore_permissions=True)
-            frappe.db.commit()
-        row = doc.append("items", {})
-        row.item_code = item_code
-        row.qty = item_data.get("qty", 1)
-        row.rate = item_data.get("rate", 0)
-        row.description = item_data.get("description")
-
-    # Apply default tax template — ERPNext populates account rows automatically
-    taxes_and_charges = payload.get("taxes_and_charges")
-    if taxes_and_charges:
-        doc.taxes_and_charges = taxes_and_charges
-
-        doc.insert(ignore_permissions=True)
-    frappe.db.commit()
+    company = _get_company(log)
+    doc = _build_doc(log, payload, extracted, company)
 
     from fatura_ai.helpers.zatca_mapper import map_zatca_fields
     if not map_zatca_fields(log, doc):
@@ -317,7 +284,139 @@ def confirm_import(log_name):
         "docname": doc.name,
         "status": doc.docstatus,
         "url": frappe.utils.get_url_to_form(doc.doctype, doc.name),
+        "warnings": _run_sanity_checks(extracted, payload.get("items", [])),
     }
+
+
+# ── confirm_import helpers ───────────────────────────────────────────────────
+
+def _check_duplicate(log, extracted):
+    """T030 — return duplicate info dict or None if no duplicate."""
+    bill_no = extracted.get("invoice_number")
+    supplier = log.matched_supplier
+    doctype = log.source_doctype or "Purchase Invoice"
+    if not bill_no or not supplier or doctype != "Purchase Invoice":
+        return None
+    existing = frappe.db.get_value(
+        "Purchase Invoice",
+        {"bill_no": bill_no, "supplier": supplier, "docstatus": ["!=", 2]},
+        "name",
+    )
+    return {"status": "duplicate", "existing_pi": existing} if existing else None
+
+
+def _get_company(log):
+    return (
+        frappe.db.get_value("Supplier", log.matched_supplier, "default_company")
+        or frappe.defaults.get_user_default("Company")
+        or (frappe.get_all("Company", limit=1) or [{}])[0].get("name")
+    )
+
+
+def _build_doc(log, payload, extracted, company):
+    """Construct and insert the ERPNext document from the mapped payload."""
+    doc = frappe.new_doc(log.source_doctype or "Purchase Invoice")
+    doc.supplier = payload.get("supplier")
+    doc.bill_no = payload.get("bill_no")
+    doc.bill_date = payload.get("bill_date")
+    doc.due_date = payload.get("due_date")
+    # T031 — currency
+    currency = _resolve_currency(extracted, company)
+    if currency:
+        doc.currency = currency
+    # T032 — cost center default
+    cost_center = frappe.db.get_value("Company", company, "cost_center") if company else None
+    for item_data in payload.get("items", []):
+        item_code = item_data.get("item_code")
+        if not item_code:
+            continue
+        if not frappe.db.exists("Item", item_code):
+            item_code = _auto_create_item(item_code, item_data)
+        row = doc.append("items", {})
+        row.item_code = item_code
+        row.qty = item_data.get("qty", 1)
+        row.rate = item_data.get("rate", 0)
+        row.description = item_data.get("description")
+        row.uom = _validate_uom(item_data.get("uom"))  # T033
+        if cost_center:
+            row.cost_center = cost_center
+    if payload.get("taxes_and_charges"):
+        doc.taxes_and_charges = payload.get("taxes_and_charges")
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return doc
+
+
+def _auto_create_item(item_code, item_data):
+    """T035 — create Item with cleaned code (no trailing junk, ≤140 chars), Services group."""
+    import re
+    clean_code = (re.sub(r'[\s./\\:\-]+$', '', item_code.strip()) or item_code.strip())[:140]
+    if frappe.db.exists("Item", clean_code):
+        return clean_code
+    item = frappe.get_doc({
+        "doctype": "Item",
+        "item_code": clean_code,
+        "item_name": (item_data.get("description") or clean_code)[:140],
+        "item_group": "Services",
+        "stock_uom": "Nos",
+        "is_stock_item": 0,
+        "is_purchase_item": 1,
+    })
+    item.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return clean_code
+
+
+def _resolve_currency(extracted, company):
+    """T031 — validate extracted currency; fall back to company default."""
+    currency = (extracted.get("currency") or "").strip().upper()
+    if currency and frappe.db.exists("Currency", currency):
+        return currency
+    if currency:
+        frappe.log_error(
+            f"Currency '{currency}' not found in ERPNext; using company default",
+            "Fatura T031 currency fallback",
+        )
+    return frappe.db.get_value("Company", company, "default_currency") if company else None
+
+
+def _validate_uom(uom):
+    """T033 — return UOM if it exists in ERPNext, otherwise fall back to Nos."""
+    if uom and frappe.db.exists("UOM", uom):
+        return uom
+    if uom:
+        frappe.log_error(f"UOM '{uom}' not found; falling back to Nos", "Fatura T033 UOM fallback")
+    return "Nos"
+
+
+def _run_sanity_checks(extracted, items):
+    """T034 — non-blocking sanity checks; return list of warning strings."""
+    warnings = []
+    subtotal = float(extracted.get("subtotal") or 0)
+    vat_amount = float(extracted.get("vat_amount") or extracted.get("tax_amount") or 0)
+    total = float(extracted.get("total") or 0)
+    if subtotal:
+        calc_sub = sum(float(i.get("qty", 1)) * float(i.get("rate", 0)) for i in items)
+        if abs(calc_sub - subtotal) >= 1.0:
+            warnings.append(
+                _("Line items total ({0}) differs from extracted subtotal ({1}) by >1 SAR").format(
+                    round(calc_sub, 2), round(subtotal, 2)
+                )
+            )
+    if subtotal and vat_amount and abs(vat_amount - subtotal * 0.15) >= 1.0:
+        warnings.append(
+            _("VAT amount ({0}) does not match 15% of subtotal ({1})").format(
+                round(vat_amount, 2), round(subtotal * 0.15, 2)
+            )
+        )
+    if total and subtotal and abs(total - subtotal - vat_amount) >= 1.0:
+        warnings.append(
+            _("Invoice total ({0}) does not match subtotal + VAT ({1})").format(
+                round(total, 2), round(subtotal + vat_amount, 2)
+            )
+        )
+    return warnings
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 

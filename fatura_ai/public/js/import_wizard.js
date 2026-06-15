@@ -16,6 +16,7 @@ window.FaturaWizard = class FaturaWizard {
 		this.dialog = null;
 		this.current_step = 0;
 		this.file_url = null;
+		this._force_import = false;
 	}
 
 	// ── Entry point ──────────────────────────────────────────────────────────
@@ -486,17 +487,59 @@ window.FaturaWizard = class FaturaWizard {
 	_do_populate() {
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.confirm_import",
-			args: { log_name: this.log_name },
+			args: { log_name: this.log_name, force: this._force_import ? 1 : 0 },
 			callback: (r) => {
 				if (!r.message) return;
+				// T030 — duplicate detected; let user decide
+				if (r.message.status === "duplicate") {
+					this._show_duplicate_warning(r.message.existing_pi);
+					return;
+				}
+				// T034 — show non-blocking sanity warnings
+				(r.message.warnings || []).forEach(w =>
+					frappe.msgprint({ message: w, indicator: "orange", title: __("Import Warning") })
+				);
 				this.dialog.hide();
 				frappe.show_alert({ message: __("Invoice imported successfully"), indicator: "green" });
-				// Open the newly created document
 				if (r.message.doctype && r.message.docname) {
 					frappe.set_route("Form", r.message.doctype, r.message.docname);
 				}
 			},
 		});
+	}
+
+	// T030 — show duplicate warning with link and force-create option
+	_show_duplicate_warning(existing_pi) {
+		const pi_url = `/app/purchase-invoice/${encodeURIComponent(existing_pi)}`;
+		this._set_content(`
+			<div style="padding:16px;">
+				<div style="background:#fef3c7; border-radius:6px; padding:16px; margin-bottom:16px; font-size:14px; color:#92400e;">
+					⚠️ <strong>${__("Duplicate Invoice Detected")}</strong><br><br>
+					${__("A Purchase Invoice with this invoice number already exists:")}
+					<a href="${pi_url}" target="_blank"
+					   style="color:#2563eb; text-decoration:underline; margin-left:4px;">${existing_pi}</a>
+				</div>
+				<p style="font-size:13px; color:#374151; margin-bottom:16px;">
+					${__("Open the existing invoice, or force-create a new one if needed.")}
+				</p>
+				<div style="display:flex; gap:8px;">
+					<a href="${pi_url}" class="btn btn-default btn-sm" target="_blank">
+						${__("Open Existing Invoice")}
+					</a>
+					<button class="btn btn-warning btn-sm fatura-force-create">
+						${__("Force Create Anyway")}
+					</button>
+				</div>
+			</div>
+		`);
+		setTimeout(() => {
+			this.dialog.fields_dict.step_content.$wrapper
+				.find(".fatura-force-create")
+				.on("click", () => {
+					this._force_import = true;
+					this._do_populate();
+				});
+		}, 50);
 	}
 
 	// ── Shared helpers ───────────────────────────────────────────────────────

@@ -35,6 +35,7 @@ def build_doctype_payload(log, extracted, confirmed_items):
         "bill_no": extracted.get("invoice_number"),
         "bill_date": extracted.get("invoice_date"),
         "due_date": extracted.get("due_date"),
+        "currency": extracted.get("currency"),
         "items": [_map_item(i) for i in confirmed_items if i.get("matched_item")],
         "taxes_and_charges": _get_default_tax_template(log.matched_supplier),
     }
