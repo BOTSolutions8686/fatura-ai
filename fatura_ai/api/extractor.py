@@ -41,10 +41,18 @@ def build_doctype_payload(log, extracted, confirmed_items):
 
 
 def _map_item(confirmed_item):
+    # Normalise rate — DeepSeek may return unit_price, price, unit_rate, etc.
+    rate = (
+        confirmed_item.get("rate")
+        or confirmed_item.get("unit_price")
+        or confirmed_item.get("price")
+        or confirmed_item.get("unit_rate")
+        or 0
+    )
     return {
         "item_code": confirmed_item["matched_item"],
         "qty": confirmed_item.get("qty", 1),
-        "rate": confirmed_item.get("rate", 0),
+        "rate": float(rate),
         "description": confirmed_item.get("description", ""),
     }
 

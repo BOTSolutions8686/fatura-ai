@@ -99,7 +99,7 @@ def _upsert_mapping(text: str, item_code: str, supplier: Optional[str], confiden
         doc = frappe.get_doc("Invoice AI Item Map", existing)
         doc.record_usage()
     else:
-        frappe.get_doc({
+        mapping = frappe.get_doc({
             "doctype": "Invoice AI Item Map",
             "original_text": text,
             "matched_item": item_code,
@@ -107,4 +107,6 @@ def _upsert_mapping(text: str, item_code: str, supplier: Optional[str], confiden
             "confidence_score": confidence,
             "times_used": 1,
             "last_used": today(),
-        }).insert(ignore_permissions=True)
+        })
+        mapping.flags.ignore_links = True
+        mapping.insert(ignore_permissions=True)
