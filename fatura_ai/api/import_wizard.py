@@ -219,72 +219,35 @@ def confirm_import(log_name):
     # Guard against double-import
     if log.status == "Success":
         frappe.throw(
-            _("This import has already been completed. Open {0}.").format(
-                log.source_docname
-            )
+            _("This import has already been completed.")
         )
 
     extracted = frappe.parse_json(log.extracted_json or "{}")
+    confirmed_items = frappe.parse_json(log.line_items or "[]")
 
-    from fatura_ai.api.extractor import _build_doctype_payload
-    payload = _build_doctype_payload(log, extracted)
+    from fatura_ai.api.extractor import build_doctype_payload
+    payload = build_doctype_payload(log, extracted, confirmed_items)
 
     # Create the document
-    doc = frappe.new_doc(log.source_doctype)
+    doc = frappe.new_doc(log.source_doctype or "Purchase Invoice")
     doc.supplier = payload.get("supplier")
     doc.bill_no = payload.get("bill_no")
     doc.bill_date = payload.get("bill_date")
     doc.due_date = payload.get("due_date")
-    doc.taxes_and_charges = payload.get("taxes_and_charges")
-    doc.taxes = payload.get("taxes", [])
+
     for item_data in payload.get("items", []):
         row = doc.append("items", {})
         row.item_code = item_data.get("item_code")
         row.qty = item_data.get("qty", 1)
         row.rate = item_data.get("rate", 0)
-        row.amount = item_data.get("amount", 0)
         row.description = item_data.get("description")
-        row.uom = item_data.get("uom")
-        row.conversion_factor = item_data.get("conversion_factor", 1)
-        row.stock_uom = item_data.get("stock_uom")
-        row.stock_qty = item_data.get("stock_qty", 1)
-        row.warehouse = item_data.get("warehouse")
-        row.expense_account = item_data.get("expense_account")
-        row.project = item_data.get("project")
-        row.cost_center = item_data.get("cost_center")
-        row.schedule_date = item_data.get("schedule_date")
-        row.delivery_note = item_data.get("delivery_note")
-        row.sales_invoice = item_data.get("sales_invoice")
-        row.purchase_order = item_data.get("purchase_order")
-        row.purchase_receipt = item_data.get("purchase_receipt")
-        row.brand = item_data.get("brand")
-        row.manufacturer = item_data.get("manufacturer")
-        row.allow_zero_valuation_rate = item_data.get("allow_zero_valuation_rate", 0)
-        row.set_warehouse = item_data.get("set_warehouse")
-        row.item_tax_template = item_data.get("item_tax_template")
-        row.item_group = item_data.get("item_group")
-        row.image = item_data.get("image")
-        row.page_break = item_data.get("page_break", 0)
-        row.weight_per_unit = item_data.get("weight_per_unit")
-        row.weight_uom = item_data.get("weight_uom")
-        row.total_weight = item_data.get("total_weight")
-        row.fixed_asset = item_data.get("fixed_asset", 0)
-        row.asset_category = item_data.get("asset_category")
-        row.asset_location = item_data.get("asset_location")
-        row.asset_depreciation = item_data.get("asset_depreciation")
-        row.asset_quantity = item_data.get("asset_quantity", 1)
-        row.asset_value = item_data.get("asset_value", 0)
-        row.asset_serial_no = item_data.get("asset_serial_no")
-        row.asset_batch_no = item_data.get("asset_batch_no")
-        row.asset_warehouse = item_data.get("asset_warehouse")
-        row.asset_cost_center = item_data.get("asset_cost_center")
-        row.asset_project = item_data.get("asset_project")
-        row.asset_department = item_data.get("asset_department")
-        row.asset_employee = item_data.get("asset_employee")
-        row.asset_customer = item_data.get("asset_customer")
-        row.asset_supplier = item_data.get("asset_supplier")
-        row.asset_manufacturer = item_data.get("asset_manufacturer")
-        row.asset_manufacturer_part_no = item_data.get("asset_manufacturer_part_no")
+
+    for tax_data in payload.get("taxes", []):
+        row = doc.append("taxes", {})
+        row.charge_type = tax_data.get("charge_type", "Actual")
+        row.tax_amount = tax_data.get("tax_amount", 0)
+        row.description = tax_data.get("description", "")
+        row.account_head = tax_data.get("account_head", "")
 
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
@@ -308,7 +271,6 @@ def confirm_import(log_name):
         "status": doc.docstatus,
         "url": frappe.utils.get_url_to_form(doc.doctype, doc.name),
     }
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
