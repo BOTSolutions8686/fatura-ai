@@ -3,8 +3,12 @@
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
+- [T024] PDF text extractor + DeepSeek structured extraction | aider | P0 | IN_PROGRESS | none
 
 ## 📋 Backlog
+- [T025] Gemini Flash vision provider (image/scan fallback) | opencode | P0 | TODO | T024
+- [T026] Smart provider routing + extraction prompt template | aider | P0 | TODO | T025
+
 
 ## 🚫 Blocked
 
