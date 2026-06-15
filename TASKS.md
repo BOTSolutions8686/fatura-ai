@@ -3,7 +3,6 @@
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-- [T012] ksa_compliance integration — link Fatura import to ZATCA fields | claude-code | P0 | IN_PROGRESS | T011
 - [T014] Write unit tests for supplier matching | aider | P1 | IN_PROGRESS | T005
 - [T015] Write unit tests for item matching | opencode | P1 | IN_PROGRESS | T006
 
@@ -30,6 +29,7 @@
 - [T009] Build 5-step wizard — Step 3: Supplier matching review UI | aider | P0 | DONE | T005,T008
 - [T010] Build 5-step wizard — Step 4: Item matching review UI | opencode | P0 | DONE | T006,T008
 - [T011] Build 5-step wizard — Step 5: Confirm + create PI/PO (never auto-submit) | aider | P0 | DONE | T009,T010
+- [T012] ksa_compliance integration — link Fatura import to ZATCA fields | claude-code | P0 | DONE | T011
 - [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | DONE | T001
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 

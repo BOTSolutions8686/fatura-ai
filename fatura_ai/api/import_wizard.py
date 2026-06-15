@@ -262,6 +262,15 @@ def confirm_import(log_name):
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
 
+    from fatura_ai.helpers.zatca_mapper import map_zatca_fields
+    if not map_zatca_fields(log, doc):
+        frappe.msgprint(
+            _("ksa_compliance is not installed — ZATCA fields were skipped."),
+            indicator="orange",
+            alert=True,
+        )
+    frappe.db.commit()
+
     log.status = "Success"
     log.save(ignore_permissions=True)
     frappe.db.commit()
