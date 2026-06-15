@@ -91,10 +91,14 @@ def match_supplier(log_name, vendor_name=None, tax_id=None):
     log = frappe.get_doc("Fatura Import Log", log_name)
 
     # Read from extracted log data if not passed explicitly
+    extracted = frappe.parse_json(log.extracted_json or "{}")
     if not vendor_name:
-        vendor_name = log.vendor_name
+        vendor_name = (
+            extracted.get("vendor_name")
+            or extracted.get("seller_name")
+            or extracted.get("supplier_name")
+        )
     if not tax_id:
-        extracted = frappe.parse_json(log.extracted_json or "{}")
         tax_id = (
             extracted.get("tax_id")
             or extracted.get("vat_number")

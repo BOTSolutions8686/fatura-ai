@@ -2,6 +2,7 @@
 3-tier supplier matching: Exact VAT → Fuzzy Name → AI Disambiguation.
 مطابقة المورد بثلاث مراحل
 """
+import re
 import frappe
 from frappe import _
 from typing import Dict, Any, Optional
@@ -9,7 +10,15 @@ import difflib
 
 
 CONFIDENCE_EXACT = 1.0
-CONFIDENCE_FUZZY_MIN = 0.85  # threshold for difflib
+CONFIDENCE_FUZZY_MIN = 0.60  # lowered from 0.85; case-insensitive normalised comparison
+
+
+def _normalise(text: str) -> str:
+    """Lowercase, replace & with 'and', collapse whitespace."""
+    text = text.lower()
+    text = re.sub(r"\s*&\s*", " and ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
@@ -30,40 +39,39 @@ def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
         "supplier": s["name"],
         "supplier_name": s["supplier_name"],
         "confidence": 1.0,
-        "tier": 1,
+        "method": "VAT Match",
     }
 
 
 def match_by_name(name: str) -> Optional[Dict[str, Any]]:
     """
-    Tier 2 — fuzzy name matching using difflib.
-    المستوى الثاني — مطابقة تقريبية لاسم المورد باستخدام difflib
+    Tier 2 — fuzzy name matching (case-insensitive, normalised).
+    المستوى الثاني — مطابقة تقريبية لاسم المورد
     """
     all_suppliers = frappe.get_all("Supplier", fields=["name", "supplier_name"])
     if not all_suppliers:
         return None
 
-    names = [s["supplier_name"] or s["name"] for s in all_suppliers]
-    matches = difflib.get_close_matches(name, names, n=1, cutoff=CONFIDENCE_FUZZY_MIN)
+    norm_input = _normalise(name)
+    # Build map: normalised_name → supplier row
+    norm_map = {_normalise(s["supplier_name"] or s["name"]): s for s in all_suppliers}
+
+    matches = difflib.get_close_matches(norm_input, norm_map.keys(), n=1, cutoff=CONFIDENCE_FUZZY_MIN)
     if not matches:
         return None
 
-    best_name = matches[0]
-    for s in all_suppliers:
-        candidate = s["supplier_name"] or s["name"]
-        if candidate == best_name:
-            # compute actual difflib ratio for confidence
-            ratio = difflib.SequenceMatcher(None, name, best_name).ratio()
-            return {
-                "supplier": s["name"],
-                "supplier_name": s["supplier_name"],
-                "confidence": ratio,
-                "tier": 2,
-            }
-    return None
+    best_norm = matches[0]
+    s = norm_map[best_norm]
+    ratio = difflib.SequenceMatcher(None, norm_input, best_norm).ratio()
+    return {
+        "supplier": s["name"],
+        "supplier_name": s["supplier_name"],
+        "confidence": round(ratio, 3),
+        "method": "Name Match",
+    }
 
 
-def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
+def match_supplier(tax_id: str = None, name: str = None) -> Dict[str, Any]:
     """
     Run the 3-tier matching pipeline.
     تشغيل سلسلة المطابقة ثلاثية المستويات
@@ -74,15 +82,16 @@ def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
         if result:
             return result
 
-    # Tier 2 — fuzzy name
-    result = match_by_name(name)
-    if result:
-        return result
+    # Tier 2 — fuzzy name (skip if no name)
+    if name:
+        result = match_by_name(name)
+        if result:
+            return result
 
-    # Tier 3 — AI disambiguation (placeholder)
+    # Tier 3 — no match found
     return {
         "supplier": None,
         "supplier_name": None,
         "confidence": 0.0,
-        "tier": 3,
+        "method": "No Match",
     }
