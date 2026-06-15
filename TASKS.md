@@ -1,5 +1,5 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 15:30 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 17:11 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
