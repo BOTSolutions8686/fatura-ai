@@ -24,7 +24,7 @@ def match_items(
 ) -> List[Dict[str, Any]]:
     """Match each extracted item and return list with match metadata."""
     global _items_cache
-    _items_cache = frappe.db.get_all('Item', filters={'disabled': 0}, fields=['name', 'item_name'])
+    _items_cache = frappe.get_all('Item', filters={'disabled': 0}, fields=['name', 'item_name'])
     try:
         return [_match_single(item, supplier) for item in extracted_items]
     finally:
@@ -46,7 +46,7 @@ def _match_single(item: Dict, supplier: Optional[str]) -> Dict[str, Any]:
 
 def _match_by_learned_mapping(text: str, supplier: Optional[str]) -> Optional[Dict]:
     """Check InvoiceAIItemMap first (highest confidence — user-validated)."""
-    from fatura_ai.fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
+    from fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
     mapping = InvoiceAIItemMap.find_mapping(text, supplier)
     if not mapping:
         return None
@@ -64,7 +64,7 @@ def _match_by_fuzzy_name(text: str) -> Optional[Dict]:
     """Tier 2 — rapidfuzz WRatio on item_name + item_code."""
     from rapidfuzz import process, fuzz
 
-    items = _items_cache if _items_cache is not None else frappe.db.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
+    items = _items_cache if _items_cache is not None else frappe.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
     choices = {i["name"]: i["item_name"] for i in items}
     best = process.extractOne(text, choices, scorer=fuzz.WRatio, score_cutoff=FUZZY_CUTOFF)
     if not best:
