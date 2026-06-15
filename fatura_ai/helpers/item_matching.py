@@ -9,6 +9,13 @@ from typing import List, Dict, Any, Optional
 
 
 FUZZY_CUTOFF = 60  # rapidfuzz 0-100 scale
+_items_cache: list | None = None  # T020: module-level cache for batch matching
+
+
+def clear_item_cache() -> None:
+    """Reset the item list cache (call between requests or after item updates)."""
+    global _items_cache
+    _items_cache = None
 
 
 def match_items(
@@ -16,7 +23,12 @@ def match_items(
     supplier: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Match each extracted item and return list with match metadata."""
-    return [_match_single(item, supplier) for item in extracted_items]
+    global _items_cache
+    _items_cache = frappe.db.get_all('Item', filters={'disabled': 0}, fields=['name', 'item_name'])
+    try:
+        return [_match_single(item, supplier) for item in extracted_items]
+    finally:
+        clear_item_cache()
 
 
 def _match_single(item: Dict, supplier: Optional[str]) -> Dict[str, Any]:
@@ -52,7 +64,7 @@ def _match_by_fuzzy_name(text: str) -> Optional[Dict]:
     """Tier 2 — rapidfuzz WRatio on item_name + item_code."""
     from rapidfuzz import process, fuzz
 
-    items = frappe.db.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
+    items = _items_cache if _items_cache is not None else frappe.db.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
     choices = {i["name"]: i["item_name"] for i in items}
     best = process.extractOne(text, choices, scorer=fuzz.WRatio, score_cutoff=FUZZY_CUTOFF)
     if not best:
