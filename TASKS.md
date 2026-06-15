@@ -1,20 +1,19 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 05:45 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 06:10 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
 
+- [T016] Write unit tests for AI extraction | aider | P1 | IN_PROGRESS | T003,T004
+- [T020] Performance: batch item matching caching | aider | P2 | IN_PROGRESS | T006
+- [T013] Write Arabic translations for all __()/()'s strings | opencode | P1 | IN_PROGRESS | T007
+
 ## 📋 Backlog
 
-### P1 — Important for release
-- [T013] Write Arabic translations for all __()/() strings | opencode | P1 | TODO | T007
-- [T016] Write unit tests for AI extraction | aider | P1 | TODO | T003,T004
-- [T018] Code review pass | claude-code | P1 | DONE | T012
-
-### P2 — Nice to have
-- [T020] Performance: batch item matching caching | aider | P2 | TODO | T006
+<!-- empty -->
 
 ## ✅ Done
+
 - [T001] Scaffold Frappe app structure + DocTypes | claude-code | P0 | DONE | none
 - [T002] Implement FaturaSettings DocType logic (validation, API key storage) | aider | P0 | DONE | T001
 - [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
@@ -30,6 +29,7 @@
 - [T014] Write unit tests for supplier matching | aider | P1 | DONE | T005
 - [T015] Write unit tests for item matching | aider | P1 | DONE | T006
 - [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | DONE | T001
+- [T018] Code review pass | claude-code | P1 | DONE | T012
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 
 ## 🚫 Blocked
