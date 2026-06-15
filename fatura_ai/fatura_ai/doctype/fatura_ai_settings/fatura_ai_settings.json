@@ -33,11 +33,11 @@
    "label": "API Configuration"
   },
   {
-   "default": "Anthropic",
+   "default": "Auto",
    "fieldname": "api_provider",
    "fieldtype": "Select",
    "label": "Default AI Provider",
-   "options": "Anthropic\nOpenAI\nGoogle\nDeepSeek",
+   "options": "Auto\nDeepSeek\nGoogle\nAnthropic\nOpenAI",
    "reqd": 1
   },
   {
@@ -124,7 +124,7 @@
    "default": "0.8",
    "fieldname": "fuzzy_match_threshold",
    "fieldtype": "Float",
-   "label": "Fuzzy Match Threshold (0–1)"
+   "label": "Fuzzy Match Threshold (0\u20131)"
   },
   {
    "fieldname": "column_break_2",
