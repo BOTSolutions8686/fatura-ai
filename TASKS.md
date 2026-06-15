@@ -1,11 +1,10 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 11:00 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 12:00 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
 - [T020] Performance: batch item matching caching | aider | P2 | IN_PROGRESS | T006
 - [T013] Write Arabic translations for all strings | opencode | P1 | IN_PROGRESS | T007
-- [T023] Fix SEC-1/SEC-2 (missing frappe.has_permission on whitelist endpoints) | aider | P1 | IN_PROGRESS | T021
 
 ## 📋 Backlog
 <!-- Tasks waiting on external dependency -->
@@ -34,3 +33,4 @@
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 - [T021] Fix P0 bugs BUG-1/BUG-2/BUG-3 in import_wizard.py | orchestrator | P0 | DONE | T018
 - [T022] Fix COR-1 (None tax_id guard) + COR-2 (items vs line_items key) | aider | P1 | DONE | T021
+- [T023] Fix SEC-1/SEC-2 | orchestrator | P1 | DONE | T021
