@@ -123,7 +123,7 @@ def match_items(log_name, line_items_json=None):
         items = frappe.parse_json(line_items_json)
     else:
         extracted = frappe.parse_json(log.extracted_json or "{}")
-        items = extracted.get("items", [])
+        items = extracted.get("line_items", [])
 
     from fatura_ai.helpers.item_matching import match_items as _match
     matched = _match(items, supplier=log.matched_supplier)

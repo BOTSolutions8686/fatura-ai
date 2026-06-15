@@ -29,7 +29,7 @@ def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
     return {
         "supplier": s["name"],
         "supplier_name": s["supplier_name"],
-        "confidence": "high",
+        "confidence": 1.0,
         "tier": 1,
     }
 
@@ -52,10 +52,12 @@ def match_by_name(name: str) -> Optional[Dict[str, Any]]:
     for s in all_suppliers:
         candidate = s["supplier_name"] or s["name"]
         if candidate == best_name:
+            # compute actual difflib ratio for confidence
+            ratio = difflib.SequenceMatcher(None, name, best_name).ratio()
             return {
                 "supplier": s["name"],
                 "supplier_name": s["supplier_name"],
-                "confidence": "medium",
+                "confidence": ratio,
                 "tier": 2,
             }
     return None
@@ -66,10 +68,11 @@ def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
     Run the 3-tier matching pipeline.
     تشغيل سلسلة المطابقة ثلاثية المستويات
     """
-    # Tier 1 — exact tax_id
-    result = match_by_tax_id(tax_id)
-    if result:
-        return result
+    # Tier 1 — exact tax_id (skip if tax_id is None or empty)
+    if tax_id:
+        result = match_by_tax_id(tax_id)
+        if result:
+            return result
 
     # Tier 2 — fuzzy name
     result = match_by_name(name)
@@ -80,6 +83,6 @@ def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
     return {
         "supplier": None,
         "supplier_name": None,
-        "confidence": "low",
+        "confidence": 0.0,
         "tier": 3,
     }
