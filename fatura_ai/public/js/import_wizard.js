@@ -120,7 +120,7 @@ window.FaturaWizard = class FaturaWizard {
 	_render_extraction() {
 		this.dialog.get_primary_btn().hide();
 		frappe.call({
-			method: "fatura_ai.api.import_wizard.run_extraction",
+			method: "fatura_ai.api.import_wizard.run_ai_extraction",
 			args: { log_name: this.log_name },
 			callback: (r) => {
 				if (r.message) {
