@@ -170,7 +170,11 @@ window.FaturaWizard = class FaturaWizard {
 					this._show_supplier_error(msg);
 					return;
 				}
-				if (r.message) this._show_supplier_match(r.message);
+				if (r.message) {
+					this._show_supplier_match(r.message);
+				} else {
+					this._show_supplier_error(__("Supplier matching returned no result — please try again"));
+				}
 			},
 		});
 	}
@@ -190,6 +194,14 @@ window.FaturaWizard = class FaturaWizard {
 				.find(".fatura-retry-supplier")
 				.on("click", () => this._render_supplier());
 		}, 50);
+	}
+
+	_pdf_type_banner() {
+		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		if (extracted.pdf_type !== "image") return "";
+		return `<div style="background:#fef3c7; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#92400e;">
+			⚠️ ${__("This invoice appears to be image-based. Extraction accuracy may be lower. QR code data (if present) is used as the primary source.")}
+		</div>`;
 	}
 
 	_show_supplier_match(match) {
@@ -215,6 +227,7 @@ window.FaturaWizard = class FaturaWizard {
 
 		this._set_content(`
 			<div style="padding:16px;">
+				${this._pdf_type_banner()}
 				<p style="font-size:13px; color:#6b7280; margin-bottom:16px;">
 					${__("AI extracted vendor")}:
 					<strong>${(this.extracted || {}).vendor_name || "—"}</strong>
@@ -285,43 +298,67 @@ window.FaturaWizard = class FaturaWizard {
 		}, 50);
 	}
 
-	// T028 — no supplier found; offer to auto-create from extracted data
+	// T028 — no supplier found; offer search or auto-create from extracted data
 	_show_supplier_autocreate(match) {
-		this.dialog.set_primary_action(__("Create & Continue"), () => this._do_create_supplier());
+		this.dialog.get_primary_btn().hide();
 		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
 		const vendor = extracted.vendor_name || extracted.seller_name || extracted.supplier_name || "";
 		const tax_id = extracted.tax_id || extracted.vat_number || extracted.seller_vat || "";
+		const qr_badge = extracted.qr_data_found
+			? `<span style="font-size:11px; color:#16a34a; margin-left:6px;">✓ ${__("from ZATCA QR")}</span>`
+			: "";
 		this._autocreate_name = vendor;
 		this._autocreate_tax_id = tax_id;
 		this._set_content(`
 			<div style="padding:16px;">
-				<div style="background:#fef2f2; border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px; color:#991b1b;">
-					❌ ${__("No matching supplier found in ERPNext.")}
+				${this._pdf_type_banner()}
+				<div style="background:#fef3c7; border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px; color:#92400e;">
+					⚠️ <strong>${__("Supplier not found in ERPNext")}</strong>
 				</div>
-				<p style="font-size:13px; color:#374151; margin-bottom:16px;">
-					${__("Auto-create a new supplier from the extracted invoice data:")}
-				</p>
+				<p style="font-size:13px; color:#374151; margin-bottom:12px; font-weight:500;">${__("Extracted from invoice")}:</p>
 				<div style="margin-bottom:12px;">
-					<label style="font-size:13px; color:#374151; display:block; margin-bottom:4px;">${__("Supplier Name")}</label>
-					<input id="fatura-new-supplier-name" type="text" class="form-control input-sm" value="${vendor}" />
+					<label style="font-size:13px; color:#6b7280; display:block; margin-bottom:4px;">${__("Name")}</label>
+					<input id="fatura-new-supplier-name" type="text" class="form-control input-sm"
+						value="${frappe.utils.escape_html(vendor)}" />
 				</div>
-				<div style="margin-bottom:12px;">
-					<label style="font-size:13px; color:#374151; display:block; margin-bottom:4px;">${__("VAT Number")}</label>
-					<input id="fatura-new-supplier-vat" type="text" class="form-control input-sm" value="${tax_id}" />
+				<div style="margin-bottom:20px;">
+					<label style="font-size:13px; color:#6b7280; display:block; margin-bottom:4px;">${__("VAT Number")}${qr_badge}</label>
+					<input id="fatura-new-supplier-vat" type="text" class="form-control input-sm"
+						value="${frappe.utils.escape_html(tax_id)}" />
 				</div>
-				<p style="font-size:12px; color:#6b7280;">
-					${__("Or type an existing supplier name below to link instead:")}
-				</p>
-				<input id="fatura-supplier-override" type="text" class="form-control input-sm"
-					placeholder="${__("Existing supplier name…")}" value="" />
+				<div style="display:flex; gap:8px; flex-wrap:wrap;">
+					<button class="btn btn-default btn-sm fatura-search-supplier">
+						🔍 ${__("Search existing supplier")}
+					</button>
+					<button class="btn btn-primary btn-sm fatura-create-supplier">
+						➕ ${__("Create new supplier")}
+					</button>
+				</div>
 			</div>
 		`);
 		setTimeout(() => {
 			const $w = this.dialog.fields_dict.step_content.$wrapper;
 			$w.find("#fatura-new-supplier-name").on("change keyup", (e) => { this._autocreate_name = e.target.value.trim(); });
 			$w.find("#fatura-new-supplier-vat").on("change keyup", (e) => { this._autocreate_tax_id = e.target.value.trim(); });
-			$w.find("#fatura-supplier-override").on("change keyup", (e) => { this.confirmed_supplier = e.target.value.trim(); });
+			$w.find(".fatura-search-supplier").on("click", () => this._open_supplier_search());
+			$w.find(".fatura-create-supplier").on("click", () => this._do_create_supplier());
 		}, 50);
+	}
+
+	_open_supplier_search() {
+		frappe.prompt(
+			[{ fieldname: "supplier", label: __("Supplier"), fieldtype: "Link", options: "Supplier", reqd: 1 }],
+			(values) => {
+				this.confirmed_supplier = values.supplier;
+				frappe.call({
+					method: "fatura_ai.api.import_wizard.confirm_supplier",
+					args: { log_name: this.log_name, supplier: values.supplier },
+					callback: () => this._go_to(3),
+				});
+			},
+			__("Search Supplier"),
+			__("Select & Continue")
+		);
 	}
 
 	_do_create_supplier() {
