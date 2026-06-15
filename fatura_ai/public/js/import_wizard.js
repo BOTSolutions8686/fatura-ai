@@ -18,6 +18,7 @@ window.FaturaWizard = class FaturaWizard {
 		this.confirmed_items = [];
 		this.dialog = null;
 		this.current_step = 0;
+		this.file_url = null;   // set by FileUploader in step 0
 	}
 
 	// ── Entry point ──────────────────────────────────────────────────────────
@@ -57,11 +58,43 @@ window.FaturaWizard = class FaturaWizard {
 
 	_render_upload() {
 		this.dialog.set_primary_action(__("Upload & Extract"), () => this._do_upload());
-		// Dialog already has a built-in X close button — no secondary needed
+
+		// Use FileUploader directly (not Attach fieldtype) so we don't need
+		// a saved document — Frappe's Attach control tries to attach to the
+		// parent form's docname which may not exist yet.
+		const $area = this.dialog.fields_dict.file_upload_html.$wrapper;
+		$area.html(`
+			<div class="fatura-upload-area"
+				style="padding:24px; text-align:center; border:2px dashed #d1d5db;
+					   border-radius:8px; margin:8px 0; background:#fafafa;">
+				<p class="fatura-file-name" style="margin-bottom:12px; color:#6b7280;">
+					${__("No file selected")}
+				</p>
+				<button class="btn btn-default btn-sm fatura-browse-btn">
+					📎 ${__("Choose Invoice (PDF / Image)")}
+				</button>
+			</div>
+		`);
+
+		$area.find(".fatura-browse-btn").on("click", () => {
+			new frappe.ui.FileUploader({
+				doctype: null,
+				docname: null,
+				folder: "Home/Attachments",
+				allow_multiple: false,
+				on_success: (file_doc) => {
+					this.file_url = file_doc.file_url;
+					const name = file_doc.file_name || file_doc.file_url;
+					$area.find(".fatura-file-name").html(
+						`✅ <strong>${name}</strong>`
+					);
+				},
+			});
+		});
 	}
 
 	_do_upload() {
-		const file_url = this.dialog.get_value("file_url");
+		const file_url = this.file_url;
 		if (!file_url) {
 			frappe.msgprint(__("Please attach an invoice file first"));
 			return;
@@ -214,7 +247,10 @@ window.FaturaWizard = class FaturaWizard {
 	_get_step_fields() {
 		return [
 			{ fieldtype: "HTML", fieldname: "step_html", options: this._step_html(0) },
-			{ fieldtype: "Attach", fieldname: "file_url", label: __("Invoice File (PDF / Image)") },
+			// Use HTML (not Attach) so we control the upload ourselves via
+			// frappe.ui.FileUploader — avoids "Could not find Source Document"
+			// errors when the parent form is unsaved (docname = "new-xxx").
+			{ fieldtype: "HTML", fieldname: "file_upload_html", options: "" },
 			{ fieldtype: "Link", fieldname: "matched_supplier", label: __("Matched Supplier"), options: "Supplier" },
 			{ fieldtype: "Float", fieldname: "supplier_confidence", label: __("Confidence"), read_only: 1 },
 		];
