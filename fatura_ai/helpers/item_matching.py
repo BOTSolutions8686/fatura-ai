@@ -46,7 +46,7 @@ def _match_single(item: Dict, supplier: Optional[str]) -> Dict[str, Any]:
 
 def _match_by_learned_mapping(text: str, supplier: Optional[str]) -> Optional[Dict]:
     """Check InvoiceAIItemMap first (highest confidence — user-validated)."""
-    from fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
+    from fatura_ai.fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
     mapping = InvoiceAIItemMap.find_mapping(text, supplier)
     if not mapping:
         return None
