@@ -1,10 +1,9 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 05:30 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 05:45 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-- [T014] Write unit tests for supplier matching | aider | P1 | IN_PROGRESS | T005
-- [T015] Write unit tests for item matching | opencode | P1 | IN_PROGRESS | T006
+- [T015] Write unit tests for item matching | aider | P1 | IN_PROGRESS | T006
 
 ## 📋 Backlog
 
@@ -17,7 +16,6 @@
 - [T020] Performance: batch item matching caching | aider | P2 | TODO | T006
 
 ## ✅ Done
-<!-- Move tasks here when committed and tested -->
 - [T001] Scaffold Frappe app structure + DocTypes | claude-code | P0 | DONE | none
 - [T002] Implement FaturaSettings DocType logic (validation, API key storage) | aider | P0 | DONE | T001
 - [T003] Implement AI extraction module — Anthropic provider (fatura_ai/ai_extraction.py) | aider | P0 | DONE | T001
@@ -30,6 +28,7 @@
 - [T010] Build 5-step wizard — Step 4: Item matching review UI | opencode | P0 | DONE | T006,T008
 - [T011] Build 5-step wizard — Step 5: Confirm + create PI/PO (never auto-submit) | aider | P0 | DONE | T009,T010
 - [T012] ksa_compliance integration — link Fatura import to ZATCA fields | claude-code | P0 | DONE | T011
+- [T014] Write unit tests for supplier matching | aider | P1 | DONE | T005
 - [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | DONE | T001
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 
