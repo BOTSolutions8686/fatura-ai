@@ -760,7 +760,7 @@ window.FaturaWizard = class FaturaWizard {
 					return;
 				}
 				// T034 — show non-blocking sanity warnings
-				(r.message.warnings || []).forEach(w =>
+				(r.message.warnings || []).filter(w => w && w.trim()).forEach(w =>
 					frappe.msgprint({ message: w, indicator: "orange", title: __("Import Warning") })
 				);
 				this.dialog.hide();
