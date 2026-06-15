@@ -12,8 +12,10 @@ Required JSON structure:
   "invoice_uuid": "UUID from QR code or XML if present, else null",
   "line_items": [
     {
-      "description": "Item or service description",
+      "item_name": "Short name or product code — first line only if the cell combines name and description",
+      "description": "Full description — everything after the first line, or same as item_name if no separate description",
       "qty": 1.0,
+      "uom": "Unit of measure from invoice (e.g. Nos, Kg, Hours, Month) — default Nos if not shown",
       "unit_price": 0.0,
       "amount": 0.0,
       "vat_rate": 0.15
@@ -32,3 +34,6 @@ Rules:
 - For Arabic text, preserve original Arabic in description fields
 - vat_number must be digits only (remove spaces/dashes)
 - invoice_date must be YYYY-MM-DD (convert from Hijri or DD/MM/YYYY if needed)
+- For line items: if the invoice has a single column combining name and description (e.g. "Yearly Services\nTechnical support for ERPNext"), split on the first newline, period, or colon — first part becomes item_name, remainder becomes description
+- item_name should be the short product code or service name (first line); description should be the full text
+- uom: extract from the invoice if shown (e.g. "Hours", "Month", "Kg"); otherwise default to "Nos"

@@ -37,13 +37,12 @@ def build_doctype_payload(log, extracted, confirmed_items):
         "bill_date": extracted.get("invoice_date"),
         "due_date": extracted.get("due_date"),
         "currency": extracted.get("currency"),
-        "items": [_map_item(i) for i in confirmed_items if i.get("matched_item")],
+        "items": [_map_item(i) for i in confirmed_items if i.get("matched_item") or i.get("item_code")],
         "taxes_and_charges": _get_default_tax_template(log.matched_supplier),
     }
 
 
 def _map_item(confirmed_item):
-    # Normalise rate — DeepSeek may return unit_price, price, unit_rate, etc.
     rate = (
         confirmed_item.get("rate")
         or confirmed_item.get("unit_price")
@@ -54,9 +53,10 @@ def _map_item(confirmed_item):
     raw_desc = confirmed_item.get("description") or ""
     description = unicodedata.normalize("NFC", raw_desc)
     return {
-        "item_code": confirmed_item["matched_item"],
-        "qty": confirmed_item.get("qty", 1),
-        "rate": float(rate),
+        "item_code": confirmed_item.get("item_code") or confirmed_item.get("matched_item"),
+        "item_name": (confirmed_item.get("item_name") or "")[:140],
+        "qty": float(confirmed_item.get("qty", 1) or 1),
+        "rate": float(rate or 0),
         "uom": confirmed_item.get("uom") or confirmed_item.get("unit") or "Nos",
         "description": description,
     }

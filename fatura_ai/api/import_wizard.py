@@ -74,6 +74,9 @@ def run_ai_extraction(log_name):
         except Exception:
             result["pdf_type"] = "unknown"
 
+    if result.get("line_items"):
+        result["line_items"] = _normalize_line_items(result["line_items"])
+
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
     log.status = "Extracted"
@@ -351,6 +354,7 @@ def _build_doc(log, payload, extracted, company):
             item_code = _auto_create_item(item_code, item_data)
         row = doc.append("items", {})
         row.item_code = item_code
+        row.item_name = item_data.get("item_name") or item_code
         row.qty = item_data.get("qty", 1)
         row.rate = item_data.get("rate", 0)
         row.description = item_data.get("description")
@@ -436,6 +440,43 @@ def _run_sanity_checks(extracted, items):
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _normalize_line_items(items: list) -> list:
+    """Normalize AI-extracted line items to ERPNext Purchase Invoice field names."""
+    result = []
+    for item in items:
+        raw_name = item.get("item_name") or item.get("name") or item.get("description", "")
+        raw_desc = item.get("description") or raw_name
+
+        if "\n" in raw_name:
+            parts = raw_name.split("\n", 1)
+            item_name = parts[0].strip()
+            description = parts[1].strip()
+        else:
+            item_name = raw_name.strip()
+            description = raw_desc.strip()
+
+        rate = (
+            item.get("unit_price") or item.get("rate")
+            or item.get("price") or item.get("unit_rate") or 0
+        )
+        qty = float(item.get("qty", 1) or 1)
+        rate_f = float(rate or 0)
+
+        result.append({
+            "item_name": item_name[:140],
+            "description": description,
+            "qty": qty,
+            "uom": item.get("uom") or item.get("unit") or "Nos",
+            "rate": rate_f,
+            "amount": float(item.get("amount") or (qty * rate_f)),
+            "matched_item": item.get("matched_item"),
+            "match_method": item.get("match_method"),
+            "match_confidence": item.get("match_confidence"),
+            "_original_text": raw_name,
+        })
+    return result
+
 
 def _assert_doctype(source_doctype):
     allowed = {"Purchase Invoice", "Purchase Order"}

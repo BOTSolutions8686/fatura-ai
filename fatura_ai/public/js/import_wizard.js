@@ -424,81 +424,166 @@ window.FaturaWizard = class FaturaWizard {
 	_show_items(data) {
 		const items = data.items || [];
 		const s = data.summary || {};
-		// Store mutable copy so edits persist
 		this.confirmed_items = items.map(item => Object.assign({}, item));
+		this._set_content(this._items_html(items, s));
+		this._bind_items_events();
+	}
 
-		const rows = items.map((item, idx) => {
-			const desc = item.description || item.item_name || "—";
-			const matched = item.matched_item || "";
-			const conf = Math.round((item.confidence || 0) * 100);
-			const confColor = conf >= 80 ? "#16a34a" : conf >= 40 ? "#d97706" : "#dc2626";
-			const badge = matched
-				? `<span style="color:${confColor}; font-size:11px;">${conf}% match</span>`
-				: `<span style="color:#dc2626; font-size:11px;">${__("No match — will create")}</span>`;
-			return `<tr style="border-bottom:1px solid #e5e7eb;">
-				<td dir="auto" style="padding:8px 4px; font-size:13px; max-width:200px; word-wrap:break-word;">${desc}</td>
-				<td style="padding:6px 4px;">
-					<input
-						data-idx="${idx}"
-						class="fatura-item-input form-control input-xs"
-						style="font-size:12px; height:28px;"
-						placeholder="${__("Item code / name")}"
-						value="${matched}" />
-					<div style="margin-top:2px;">${badge}</div>
-				</td>
-				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.qty || 1}</td>
-				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.rate || item.unit_price || 0}</td>
-			</tr>`;
-		}).join("");
-
-		this._set_content(`
-			<div style="padding:16px;">
-				<div style="margin-bottom:12px; font-size:13px; color:#6b7280;">
-					${s.matched || 0}/${s.total || 0} ${__("items matched")} &nbsp;·&nbsp;
-					${__("Edit item codes below. Blank rows will be skipped. New codes will be created automatically.")}
-				</div>
-				<div style="overflow-x:auto;">
-				<table style="width:100%; border-collapse:collapse; font-size:13px;">
-					<thead>
-						<tr style="border-bottom:2px solid #e5e7eb; color:#6b7280;">
-							<th style="padding:6px 4px; text-align:left; font-weight:500; width:45%;">${__("Description from Invoice")}</th>
-							<th style="padding:6px 4px; text-align:left; font-weight:500; width:35%;">${__("ERPNext Item Code")}</th>
-							<th style="padding:6px 4px; text-align:right; font-weight:500;">${__("Qty")}</th>
-							<th style="padding:6px 4px; text-align:right; font-weight:500;">${__("Rate")}</th>
-						</tr>
-					</thead>
-					<tbody>${rows}</tbody>
-				</table>
-				</div>
+	_items_html(items, s) {
+		const legend = `<div style="margin-bottom:10px;font-size:13px;color:#6b7280;">
+			${s.matched || 0}/${s.total || 0} ${__("items matched")} &nbsp;·&nbsp;
+			<span style="color:#ca8a04;">■</span> = ${__("needs item code")}
+		</div>`;
+		const empty = items.length === 0
+			? `<p style="padding:20px 0;text-align:center;color:#6b7280;font-size:13px;">
+				${__("No items found in invoice. Add items manually.")}
+			   </p>`
+			: "";
+		const thead = `<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+			<th style="padding:5px 4px;width:18px;color:#6b7280;font-weight:500;">#</th>
+			<th style="padding:5px 4px;text-align:left;color:#6b7280;font-weight:500;min-width:90px;">${__("Item Code")}</th>
+			<th style="padding:5px 4px;text-align:left;color:#6b7280;font-weight:500;min-width:110px;">${__("Item Name")}</th>
+			<th style="padding:5px 4px;text-align:left;color:#6b7280;font-weight:500;min-width:130px;">${__("Description")}</th>
+			<th style="padding:5px 4px;text-align:right;color:#6b7280;font-weight:500;width:46px;">${__("Qty")}</th>
+			<th style="padding:5px 4px;text-align:left;color:#6b7280;font-weight:500;width:50px;">${__("UOM")}</th>
+			<th style="padding:5px 4px;text-align:right;color:#6b7280;font-weight:500;width:66px;">${__("Rate")}</th>
+			<th style="padding:5px 4px;text-align:right;color:#6b7280;font-weight:500;width:66px;">${__("Amount")}</th>
+			<th style="padding:5px 4px;width:24px;"></th>
+		</tr></thead>`;
+		const tbody = `<tbody id="fatura-items-tbody">${this._items_tbody_html(items)}</tbody>`;
+		return `<div style="padding:12px 16px;">
+			${legend}${empty}
+			<div style="overflow-x:auto;">
+				<table style="width:100%;border-collapse:collapse;font-size:12px;">${thead}${tbody}</table>
 			</div>
-		`);
+			<button class="btn btn-default btn-xs fatura-add-row" style="margin-top:10px;font-size:12px;">
+				+ ${__("Add row")}
+			</button>
+		</div>`;
+	}
 
-		// Wire up input changes
+	_items_tbody_html(items) {
+		return items.map((item, idx) => this._item_row_html(item, idx)).join("");
+	}
+
+	_item_row_html(item, idx) {
+		const matched = item.matched_item || item.item_code || "";
+		const rowBg = matched ? "" : "background:#FFFDE7;";
+		const method = item.match_method || "";
+		const conf = Math.round((item.match_confidence || 0) * 100);
+		const tip = method ? `title="${frappe.utils.escape_html(method + (conf ? ` (${conf}%)` : ''))}"` : "";
+		const codeStyle = matched ? "border-color:#34A853;background:#f0fdf4;" : "";
+		const qty = parseFloat(item.qty || 1);
+		const rate = parseFloat(item.rate || item.unit_price || 0);
+		const amount = parseFloat(item.amount || (qty * rate));
+		return `<tr data-idx="${idx}" style="border-bottom:1px solid #f3f4f6;${rowBg}">
+			<td style="padding:4px;color:#9ca3af;font-size:11px;text-align:center;">${idx + 1}</td>
+			<td style="padding:4px;">
+				<input type="text" class="fatura-item-code form-control input-xs" ${tip}
+					style="height:26px;font-size:11px;width:100%;${codeStyle}"
+					placeholder="${__("Search item…")}" value="${frappe.utils.escape_html(matched)}" />
+			</td>
+			<td style="padding:4px;">
+				<input type="text" class="fatura-item-name form-control input-xs"
+					style="height:26px;font-size:11px;width:100%;" maxlength="140"
+					value="${frappe.utils.escape_html(item.item_name || "")}" />
+			</td>
+			<td style="padding:4px;">
+				<textarea class="fatura-desc form-control"
+					style="font-size:11px;resize:vertical;min-height:26px;height:38px;width:100%;"
+					rows="1">${frappe.utils.escape_html(item.description || "")}</textarea>
+			</td>
+			<td style="padding:4px;">
+				<input type="number" class="fatura-qty form-control input-xs"
+					style="height:26px;font-size:11px;text-align:right;width:100%;"
+					value="${qty}" min="0" step="0.001" />
+			</td>
+			<td style="padding:4px;">
+				<input type="text" class="fatura-uom form-control input-xs"
+					style="height:26px;font-size:11px;width:100%;"
+					value="${frappe.utils.escape_html(item.uom || "Nos")}" />
+			</td>
+			<td style="padding:4px;">
+				<input type="number" class="fatura-rate form-control input-xs"
+					style="height:26px;font-size:11px;text-align:right;width:100%;"
+					value="${rate}" min="0" step="0.001" />
+			</td>
+			<td style="padding:4px;text-align:right;font-size:11px;color:#374151;white-space:nowrap;" class="fatura-amount">${amount.toFixed(2)}</td>
+			<td style="padding:4px;text-align:center;">
+				<button class="btn btn-xs fatura-remove-row"
+					style="padding:1px 5px;font-size:13px;line-height:1;color:#9ca3af;background:none;border:none;"
+					title="${__("Remove row")}">×</button>
+			</td>
+		</tr>`;
+	}
+
+	_bind_items_events() {
 		setTimeout(() => {
-			this.dialog.fields_dict.step_content.$wrapper
-				.find(".fatura-item-input")
-				.on("change keyup", (e) => {
-					const idx = parseInt($(e.target).data("idx"));
-					this.confirmed_items[idx].matched_item = e.target.value.trim();
+			const $w = this.dialog.fields_dict.step_content.$wrapper;
+			$w.on("click.fatura-items", ".fatura-remove-row", (e) => {
+				const idx = parseInt($(e.target).closest("tr").data("idx"));
+				this._sync_from_dom();
+				this.confirmed_items.splice(idx, 1);
+				this._refresh_items_tbody();
+			});
+			$w.on("input.fatura-items change.fatura-items", ".fatura-qty, .fatura-rate", (e) => {
+				const $tr = $(e.target).closest("tr");
+				const qty = parseFloat($tr.find(".fatura-qty").val() || 0);
+				const rate = parseFloat($tr.find(".fatura-rate").val() || 0);
+				$tr.find(".fatura-amount").text((qty * rate).toFixed(2));
+			});
+			$w.find(".fatura-add-row").on("click", () => {
+				this._sync_from_dom();
+				this.confirmed_items.push({
+					item_name: "", description: "", qty: 1,
+					uom: "Nos", rate: 0, amount: 0, matched_item: null,
 				});
+				this._refresh_items_tbody();
+			});
 		}, 50);
 	}
 
-	_do_confirm_items() {
-		// Collect final values from inputs (in case of rapid changes)
-		const $wrapper = this.dialog.fields_dict.step_content.$wrapper;
-		$wrapper.find(".fatura-item-input").each((_, el) => {
-			const idx = parseInt($(el).data("idx"));
-			if (this.confirmed_items[idx]) {
-				this.confirmed_items[idx].matched_item = el.value.trim();
-			}
+	_sync_from_dom() {
+		const $w = this.dialog.fields_dict.step_content.$wrapper;
+		$w.find("#fatura-items-tbody tr").each((_, tr) => {
+			const $tr = $(tr);
+			const idx = parseInt($tr.data("idx"));
+			const item = this.confirmed_items[idx];
+			if (!item) return;
+			item.matched_item = $tr.find(".fatura-item-code").val().trim() || null;
+			item.item_name = $tr.find(".fatura-item-name").val().trim();
+			item.description = $tr.find(".fatura-desc").val().trim();
+			item.qty = parseFloat($tr.find(".fatura-qty").val()) || 1;
+			item.uom = $tr.find(".fatura-uom").val().trim() || "Nos";
+			item.rate = parseFloat($tr.find(".fatura-rate").val()) || 0;
+			item.amount = item.qty * item.rate;
 		});
+	}
 
+	_refresh_items_tbody() {
+		const $w = this.dialog.fields_dict.step_content.$wrapper;
+		$w.find("#fatura-items-tbody").html(this._items_tbody_html(this.confirmed_items));
+	}
+
+	_do_confirm_items() {
+		this._sync_from_dom();
+		const items = this.confirmed_items.map(item => ({
+			item_code: item.matched_item || null,
+			item_name: item.item_name || "",
+			description: item.description || "",
+			qty: parseFloat(item.qty) || 1,
+			uom: item.uom || "Nos",
+			rate: parseFloat(item.rate) || 0,
+			amount: parseFloat(item.amount) || 0,
+			matched_item: item.matched_item || null,
+			match_method: item.match_method || (item.matched_item ? "Manual" : null),
+			match_confidence: item.match_confidence || 0,
+		}));
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.confirm_items",
 			args: {
 				log_name: this.log_name,
-				confirmed_items: JSON.stringify(this.confirmed_items),
+				confirmed_items: JSON.stringify(items),
 			},
 			callback: () => this._go_to(4),
 		});
