@@ -1,11 +1,12 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 15:00 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-15 15:30 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-- [T026] Smart provider routing + extraction prompt template | aider | P0 | IN_PROGRESS | T025
+<!-- none -->
 
 ## 📋 Backlog
+<!-- none — sprint complete, awaiting new tasks from Talha -->
 
 ## 🚫 Blocked
 
@@ -35,4 +36,5 @@
 - [T023] Fix SEC-1/SEC-2 | orchestrator | P1 | DONE | T021
 - [T024] PDF text extractor + DeepSeek structured extraction | aider | P0 | DONE | none
 - [T025] Gemini Flash vision provider (image/scan fallback) | opencode | P0 | DONE | T024
+- [T026] Smart provider routing + extraction prompt template | aider | P0 | DONE | T025
 - [T027] Add DeepSeek provider fields to FaturaSettings DocType | aider | P0 | DONE | T024
