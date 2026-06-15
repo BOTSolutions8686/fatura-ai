@@ -66,13 +66,6 @@ def run_ai_extraction(log_name):
         )
 
     # Update log fields
-    log.vendor_name = result.get("vendor_name")
-    log.invoice_number = result.get("invoice_number")
-    log.invoice_date = result.get("invoice_date")
-    log.line_items = frappe.as_json(result.get("line_items", []))
-    log.subtotal = result.get("subtotal")
-    log.vat_amount = result.get("vat_amount")
-    log.total = result.get("total")
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
     log.status = "Processing"
@@ -186,6 +179,11 @@ def confirm_items(log_name, confirmed_items):
     items = frappe.parse_json(confirmed_items) if isinstance(confirmed_items, str) else confirmed_items
     log = frappe.get_doc("Fatura Import Log", log_name)
     persist_mappings(items, supplier=log.matched_supplier)
+    # Store confirmed items on the log so confirm_import can read them back
+    extracted = frappe.parse_json(log.extracted_json or "{}")
+    extracted["confirmed_items"] = items
+    log.extracted_json = frappe.as_json(extracted)
+    log.save(ignore_permissions=True)
     frappe.db.commit()
     return {"status": "ok", "saved": len(items)}
 
@@ -223,7 +221,7 @@ def confirm_import(log_name):
         )
 
     extracted = frappe.parse_json(log.extracted_json or "{}")
-    confirmed_items = frappe.parse_json(log.line_items or "[]")
+    confirmed_items = extracted.get("confirmed_items") or extracted.get("line_items", [])
 
     from fatura_ai.api.extractor import build_doctype_payload
     payload = build_doctype_payload(log, extracted, confirmed_items)
@@ -244,7 +242,7 @@ def confirm_import(log_name):
             new_item = frappe.get_doc({
                 "doctype": "Item",
                 "item_code": item_code,
-                "item_name": item_data.get("description") or item_code,
+                "item_name": (item_data.get("description") or item_code)[:140],
                 "item_group": "All Item Groups",
                 "stock_uom": "Nos",
                 "is_stock_item": 0,

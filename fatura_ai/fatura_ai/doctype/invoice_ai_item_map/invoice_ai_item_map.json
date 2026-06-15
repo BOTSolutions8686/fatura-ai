@@ -19,7 +19,7 @@
  "fields": [
   {
    "fieldname": "original_text",
-   "fieldtype": "Data",
+   "fieldtype": "Text",
    "in_list_view": 1,
    "label": "Original Invoice Text",
    "reqd": 1
