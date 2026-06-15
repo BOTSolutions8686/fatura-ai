@@ -90,6 +90,18 @@ def match_supplier(log_name, vendor_name=None, tax_id=None):
     frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
+    # Read from extracted log data if not passed explicitly
+    if not vendor_name:
+        vendor_name = log.vendor_name
+    if not tax_id:
+        extracted = frappe.parse_json(log.extracted_json or "{}")
+        tax_id = (
+            extracted.get("tax_id")
+            or extracted.get("vat_number")
+            or extracted.get("seller_vat")
+            or extracted.get("seller_vat_number")
+        )
+
     if not vendor_name and not tax_id:
         frappe.throw(
             _("Cannot match supplier: no name or VAT in extracted data")
