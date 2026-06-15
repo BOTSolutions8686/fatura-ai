@@ -19,10 +19,12 @@ class FaturaImportLog(Document):
         provider = self.provider_used or _("AI")
         return _("{0} — {1} import").format(source, provider)
 
-    def mark_success(self, matched_supplier=None, items_matched=0):
-        self.status = "Success"
+    def mark_success(self, matched_supplier=None, items_matched=0, linked_pi=None):
+        self.status = "Imported"
         self.matched_supplier = matched_supplier
         self.items_matched = items_matched
+        if linked_pi:
+            self.linked_pi = linked_pi
         self.save(ignore_permissions=True)
 
     def mark_failed(self, error_message):

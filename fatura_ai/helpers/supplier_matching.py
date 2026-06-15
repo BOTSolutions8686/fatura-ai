@@ -3,6 +3,7 @@
 مطابقة المورد بثلاث مراحل
 """
 import re
+import unicodedata
 import frappe
 from frappe import _
 from typing import Dict, Any, Optional
@@ -14,7 +15,8 @@ CONFIDENCE_FUZZY_MIN = 0.60  # lowered; case-insensitive normalised comparison
 
 
 def _normalise(text: str) -> str:
-    """Lowercase, replace & with 'and', collapse whitespace."""
+    """NFC-normalize Unicode (preserves Arabic), lowercase, collapse whitespace."""
+    text = unicodedata.normalize("NFC", text)
     text = text.lower()
     text = re.sub(r"\s*&\s*", " and ", text)
     text = re.sub(r"\s+", " ", text).strip()

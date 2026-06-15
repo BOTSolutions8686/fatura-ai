@@ -3,6 +3,7 @@ Extraction pipeline orchestrator.
 Delegates to the active AI provider; does not contain provider logic.
 منسق خط أنابيب الاستخراج
 """
+import unicodedata
 import frappe
 from frappe import _
 from fatura_ai.helpers.ai_extraction import get_active_provider
@@ -50,12 +51,14 @@ def _map_item(confirmed_item):
         or confirmed_item.get("unit_rate")
         or 0
     )
+    raw_desc = confirmed_item.get("description") or ""
+    description = unicodedata.normalize("NFC", raw_desc)
     return {
         "item_code": confirmed_item["matched_item"],
         "qty": confirmed_item.get("qty", 1),
         "rate": float(rate),
         "uom": confirmed_item.get("uom") or confirmed_item.get("unit") or "Nos",
-        "description": confirmed_item.get("description", ""),
+        "description": description,
     }
 
 

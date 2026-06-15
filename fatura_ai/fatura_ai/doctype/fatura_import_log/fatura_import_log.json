@@ -11,6 +11,7 @@
   "import_date",
   "column_break_header",
   "provider_used",
+  "linked_pi",
   "section_break_source",
   "source_doctype",
   "source_docname",
@@ -45,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Draft\nProcessing\nSuccess\nPartial\nFailed",
+   "options": "Draft\nExtracted\nConfirmed\nImported\nFailed",
    "reqd": 1
   },
   {
@@ -62,6 +63,13 @@
    "fieldname": "provider_used",
    "fieldtype": "Data",
    "label": "AI Provider Used"
+  },
+  {
+   "fieldname": "linked_pi",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice"
   },
   {
    "fieldname": "section_break_source",
@@ -103,6 +111,7 @@
   {
    "fieldname": "matched_supplier",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Matched Supplier",
    "options": "Supplier"
   },
@@ -164,7 +173,7 @@
   }
  ],
  "links": [],
- "modified": "2026-06-14 00:00:00.000000",
+ "modified": "2026-06-15 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fatura AI",
  "name": "Fatura Import Log",

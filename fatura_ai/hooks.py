@@ -1,8 +1,10 @@
 app_name = "fatura_ai"
 app_title = "Fatura AI"
 app_publisher = "BOT Solutions"
-app_description = "AI-powered invoice import for ERPNext"
-app_email = "support@botsolutions.tech"
+app_description = "AI-powered supplier invoice import for ERPNext — Saudi market"
+app_icon = "octicon octicon-file-text"
+app_color = "#1A73E8"
+app_email = "info@botsolutions.tech"
 app_license = "MIT"
 app_version = "1.0.0"
 

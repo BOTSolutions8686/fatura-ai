@@ -48,8 +48,7 @@ def run_ai_extraction(log_name):
     file_doc = frappe.get_doc("File", {"file_url": log.file_url})
     file_path = file_doc.get_full_path()
 
-    # Mark as Processing before calling AI
-    log.status = "Processing"
+    log.status = "Draft"
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -58,17 +57,28 @@ def run_ai_extraction(log_name):
         result = extract_invoice_data(log.file_url)
     except Exception as e:
         log.mark_failed(str(e))
-        log.save(ignore_permissions=True)
         frappe.db.commit()
         frappe.throw(
             _("AI extraction failed: {0}").format(str(e)),
             frappe.ValidationError,
         )
 
-    # Update log fields
+    # T039 — merge ZATCA QR data (ground truth) over AI result
+    if log.file_url and log.file_url.lower().endswith(".pdf"):
+        try:
+            from fatura_ai.helpers.zatca_qr import extract_zatca_qr
+            file_doc = frappe.get_doc("File", {"file_url": log.file_url})
+            qr_data = extract_zatca_qr(file_doc.get_full_path())
+            if qr_data:
+                for key in ("vat_number", "total", "vat_amount", "seller_name", "invoice_date"):
+                    if qr_data.get(key):
+                        result[key] = qr_data[key]
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Fatura AI ZATCA QR")
+
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
-    log.status = "Processing"
+    log.status = "Extracted"
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -214,10 +224,10 @@ def confirm_items(log_name, confirmed_items):
     items = frappe.parse_json(confirmed_items) if isinstance(confirmed_items, str) else confirmed_items
     log = frappe.get_doc("Fatura Import Log", log_name)
     persist_mappings(items, supplier=log.matched_supplier)
-    # Store confirmed items on the log so confirm_import can read them back
     extracted = frappe.parse_json(log.extracted_json or "{}")
     extracted["confirmed_items"] = items
     log.extracted_json = frappe.as_json(extracted)
+    log.status = "Confirmed"
     log.save(ignore_permissions=True)
     frappe.db.commit()
     return {"status": "ok", "saved": len(items)}
@@ -275,7 +285,8 @@ def confirm_import(log_name, force=False):
         )
     frappe.db.commit()
 
-    log.status = "Success"
+    log.status = "Imported"
+    log.linked_pi = doc.name if doc.doctype == "Purchase Invoice" else None
     log.save(ignore_permissions=True)
     frappe.db.commit()
 

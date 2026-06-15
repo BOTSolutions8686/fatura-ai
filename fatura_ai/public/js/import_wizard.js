@@ -366,7 +366,7 @@ window.FaturaWizard = class FaturaWizard {
 				? `<span style="color:${confColor}; font-size:11px;">${conf}% match</span>`
 				: `<span style="color:#dc2626; font-size:11px;">${__("No match — will create")}</span>`;
 			return `<tr style="border-bottom:1px solid #e5e7eb;">
-				<td style="padding:8px 4px; font-size:13px; max-width:200px; word-wrap:break-word;">${desc}</td>
+				<td dir="auto" style="padding:8px 4px; font-size:13px; max-width:200px; word-wrap:break-word;">${desc}</td>
 				<td style="padding:6px 4px;">
 					<input
 						data-idx="${idx}"
@@ -545,18 +545,27 @@ window.FaturaWizard = class FaturaWizard {
 	// ── Shared helpers ───────────────────────────────────────────────────────
 
 	_step_html(step) {
-		const labels = [__("Upload"), __("Extracting"), __("Supplier"), __("Items"), __("Review")];
-		return `<div style="display:flex; gap:8px; padding:8px 0 16px; font-size:13px;">` +
-			labels.map((l, i) => {
-				const active = i === step;
-				const done = i < step;
-				const style = active
-					? "color:#2563eb; font-weight:600; border-bottom:2px solid #2563eb; padding-bottom:4px;"
-					: done
-					? "color:#16a34a;"
-					: "color:#9ca3af;";
-				return `<span style="${style}">${done ? "✓ " : ""}${l}</span>${i < labels.length - 1 ? '<span style="color:#d1d5db;">›</span>' : ""}`;
-			}).join("") +
-			`</div>`;
+		const labels = [
+			__("Upload"), __("AI Extraction"), __("Supplier"),
+			__("Items"), __("Review"), __("Done"),
+		];
+		const parts = labels.map((label, i) => {
+			const done = i < step;
+			const active = i === step;
+			const circleColor = active ? "#1A73E8" : done ? "#34A853" : "#e5e7eb";
+			const textColor = (active || done) ? "#fff" : "#9ca3af";
+			const labelColor = active ? "#1A73E8" : done ? "#34A853" : "#9ca3af";
+			const lineColor = done ? "#34A853" : "#e5e7eb";
+			const circle = `<div style="width:26px;height:26px;border-radius:50%;background:${circleColor};
+				color:${textColor};display:flex;align-items:center;justify-content:center;
+				font-size:11px;font-weight:700;flex-shrink:0;">${done ? "✓" : i + 1}</div>`;
+			const lbl = `<div style="font-size:10px;margin-top:3px;color:${labelColor};
+				font-weight:${active ? 600 : 400};text-align:center;white-space:nowrap;">${label}</div>`;
+			const connector = i < labels.length - 1
+				? `<div style="flex:1;height:2px;background:${lineColor};margin-bottom:14px;min-width:8px;"></div>`
+				: "";
+			return `<div style="display:flex;flex-direction:column;align-items:center;">${circle}${lbl}</div>${connector}`;
+		}).join("");
+		return `<div style="display:flex;align-items:center;padding:10px 4px 14px;gap:2px;">${parts}</div>`;
 	}
 };

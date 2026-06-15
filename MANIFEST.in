@@ -1,0 +1,6 @@
+recursive-include fatura_ai *.json
+recursive-include fatura_ai *.js
+recursive-include fatura_ai *.css
+recursive-include fatura_ai *.html
+recursive-include fatura_ai *.txt
+include requirements.txt
