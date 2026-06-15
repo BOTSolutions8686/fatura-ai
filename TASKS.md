@@ -9,7 +9,7 @@
 ### P1 — Important for release
 - [T013] Write Arabic translations for all __()/() strings | opencode | P1 | TODO | T007
 - [T016] Write unit tests for AI extraction | aider | P1 | TODO | T003,T004
-- [T018] Code review pass — review all Aider/OpenCode output | claude-code | P1 | TODO | T012
+- [T018] Code review pass | claude-code | P1 | DONE | T012
 
 ### P2 — Nice to have
 - [T020] Performance: batch item matching caching | aider | P2 | TODO | T006
