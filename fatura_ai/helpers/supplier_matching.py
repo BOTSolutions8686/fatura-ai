@@ -10,7 +10,7 @@ import difflib
 
 
 CONFIDENCE_EXACT = 1.0
-CONFIDENCE_FUZZY_MIN = 0.60  # lowered from 0.85; case-insensitive normalised comparison
+CONFIDENCE_FUZZY_MIN = 0.60  # lowered; case-insensitive normalised comparison
 
 
 def _normalise(text: str) -> str:
@@ -39,7 +39,7 @@ def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
         "supplier": s["name"],
         "supplier_name": s["supplier_name"],
         "confidence": 1.0,
-        "method": "VAT Match",
+        "method": "Exact VAT",
     }
 
 
@@ -67,7 +67,7 @@ def match_by_name(name: str) -> Optional[Dict[str, Any]]:
         "supplier": s["name"],
         "supplier_name": s["supplier_name"],
         "confidence": round(ratio, 3),
-        "method": "Name Match",
+        "method": "Fuzzy Name",
     }
 
 
@@ -93,5 +93,5 @@ def match_supplier(tax_id: str = None, name: str = None) -> Dict[str, Any]:
         "supplier": None,
         "supplier_name": None,
         "confidence": 0.0,
-        "method": "No Match",
+        "method": "AI Disambiguation",
     }
