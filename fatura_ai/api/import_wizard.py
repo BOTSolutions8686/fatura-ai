@@ -75,7 +75,7 @@ def run_ai_extraction(log_name):
     log.total = result.get("total")
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
-    log.status = "Extracted"
+    log.status = "Processing"
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
