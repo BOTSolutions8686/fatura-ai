@@ -171,12 +171,27 @@
 
     .empty-state {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100%;
       color: var(--muted);
       font-size: 12px;
-      gap: 8px;
+      gap: 12px;
+      text-align: center;
+      padding: 20px;
+    }
+    .empty-state code {
+      display: block;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--accent-opencode);
+      text-align: left;
+      white-space: pre;
+      line-height: 1.7;
     }
 
     /* ── status bar ── */
@@ -224,7 +239,7 @@
 <main id="grid">
   <!-- populated by JS -->
   <div class="empty-state" style="grid-column:1/-1">
-    <span>⏳ Connecting to Terminal.app…</span>
+    <span>⏳ Connecting…</span>
   </div>
 </main>
 
@@ -312,7 +327,14 @@
         grid.innerHTML = '';
 
         if (windows.length === 0) {
-          grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">⚠️ No Terminal windows detected</div>';
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+            <span>No agent logs found yet.</span>
+            <span style="color:var(--muted);font-size:11px">Start each agent with output piped to a log file:</span>
+            <code>aider … 2>&amp;1 | tee /tmp/fatura-agent-1.log
+claude … 2>&amp;1 | tee /tmp/fatura-agent-2.log
+opencode … 2>&amp;1 | tee /tmp/fatura-agent-3.log</code>
+            <span style="color:var(--muted);font-size:10px">Dashboard auto-refreshes every 2 s</span>
+          </div>`;
           return;
         }
 
