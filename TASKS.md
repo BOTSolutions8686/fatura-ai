@@ -3,7 +3,6 @@
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-- [T015] Write unit tests for item matching | aider | P1 | DONE | T006
 
 ## 📋 Backlog
 
@@ -29,6 +28,7 @@
 - [T011] Build 5-step wizard — Step 5: Confirm + create PI/PO (never auto-submit) | aider | P0 | DONE | T009,T010
 - [T012] ksa_compliance integration — link Fatura import to ZATCA fields | claude-code | P0 | DONE | T011
 - [T014] Write unit tests for supplier matching | aider | P1 | DONE | T005
+- [T015] Write unit tests for item matching | aider | P1 | DONE | T006
 - [T017] FaturaImportLog — implement status tracking and error logging | aider | P1 | DONE | T001
 - [T019] Google Gemini AI provider | opencode | P2 | DONE | T003
 
