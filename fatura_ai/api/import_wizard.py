@@ -359,7 +359,7 @@ def _check_duplicate(log, extracted):
 
 def _get_company(log):
     return (
-        frappe.db.get_value("Supplier", log.matched_supplier, "default_company")
+        None
         or frappe.defaults.get_user_default("Company")
         or (frappe.get_all("Company", limit=1) or [{}])[0].get("name")
     )
