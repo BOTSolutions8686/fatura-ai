@@ -232,6 +232,25 @@ def confirm_items(log_name, confirmed_items):
     from fatura_ai.helpers.item_matching import persist_mappings
     items = frappe.parse_json(confirmed_items) if isinstance(confirmed_items, str) else confirmed_items
     log = frappe.get_doc("Fatura Import Log", log_name)
+
+    # Validate items
+    warnings = []
+    for i, item in enumerate(items):
+        if not item.get("item_code") and not item.get("matched_item"):
+            warnings.append(
+                _("Row {0}: no item code selected").format(i + 1)
+            )
+        qty = float(item.get("qty", 1) or 1)
+        rate = float(item.get("rate", 0) or 0)
+        if qty <= 0:
+            warnings.append(
+                _("Row {0}: quantity must be greater than zero").format(i + 1)
+            )
+        if rate < 0:
+            warnings.append(
+                _("Row {0}: rate cannot be negative").format(i + 1)
+            )
+
     persist_mappings(items, supplier=log.matched_supplier)
     extracted = frappe.parse_json(log.extracted_json or "{}")
     extracted["confirmed_items"] = items
@@ -239,7 +258,12 @@ def confirm_items(log_name, confirmed_items):
     log.status = "Confirmed"
     log.save(ignore_permissions=True)
     frappe.db.commit()
-    return {"status": "ok", "saved": len(items)}
+
+    return {
+        "status": "ok",
+        "saved": len(items),
+        "warnings": warnings,
+    }
 
 
 # ── Step 4: Review Details ──────────────────────────────────────────────────
@@ -279,6 +303,14 @@ def confirm_import(log_name, force=False):
         dup = _check_duplicate(log, extracted)
         if dup:
             return dup
+
+    # Auto-create ERPNext Items for rows the user flagged with the checkbox
+    for item in confirmed_items:
+        if item.get("auto_create") and not item.get("matched_item"):
+            item_label = item.get("item_name") or item.get("description") or "Unknown Item"
+            new_code = _auto_create_item(item_label, item)
+            item["matched_item"] = new_code
+            item["item_code"] = new_code
 
     from fatura_ai.api.extractor import build_doctype_payload
     payload = build_doctype_payload(log, extracted, confirmed_items)

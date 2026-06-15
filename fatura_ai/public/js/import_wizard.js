@@ -17,6 +17,7 @@ window.FaturaWizard = class FaturaWizard {
 		this.current_step = 0;
 		this.file_url = null;
 		this._force_import = false;
+		this._auto_create_items = true;
 	}
 
 	// ── Entry point ──────────────────────────────────────────────────────────
@@ -406,6 +407,7 @@ window.FaturaWizard = class FaturaWizard {
 	// ── Step 3: Item Matching ────────────────────────────────────────────────
 
 	_render_items() {
+		this.dialog.get_primary_btn().show();
 		this.dialog.set_primary_action(__("Confirm Items"), () => this._do_confirm_items());
 		this._set_content(`<div style="padding:16px;color:#6b7280;">${__("Matching items…")}</div>`);
 
@@ -429,10 +431,40 @@ window.FaturaWizard = class FaturaWizard {
 		this._bind_items_events();
 	}
 
+	_items_summary_text(items) {
+		const list = items !== undefined ? items : this.confirmed_items;
+		const total = list.length;
+		const matched = list.filter(i => !!(i.matched_item || i.item_code)).length;
+		const unmatched = total - matched;
+		if (total === 0) return __("No items");
+		if (unmatched === 0) return `${matched}/${total} ${__("items matched")}`;
+		const action = this._auto_create_items ? __("will be auto-created") : __("will be skipped");
+		return `${matched}/${total} ${__("items matched")} &nbsp;&middot;&nbsp; ${unmatched} ${action}`;
+	}
+
 	_items_html(items, s) {
+		const matchedCount = s.matched || 0;
+		const totalCount = s.total || 0;
+		const partialCount = s.partial || 0;
+		const unmatchedCount = s.unmatched || 0;
+		const allMatched = matchedCount === totalCount && totalCount > 0;
+		const legendColor = allMatched ? "#16a34a" : unmatchedCount > 0 ? "#dc2626" : "#ca8a04";
+		const legendIcon = allMatched ? "✅" : unmatchedCount > 0 ? "❌" : "⚠️";
 		const legend = `<div style="margin-bottom:10px;font-size:13px;color:#6b7280;">
-			${s.matched || 0}/${s.total || 0} ${__("items matched")} &nbsp;·&nbsp;
-			<span style="color:#ca8a04;">■</span> = ${__("needs item code")}
+			<span style="color:${legendColor};font-weight:500;">${legendIcon} ${matchedCount}/${totalCount} ${__("items matched")}</span>
+			${partialCount > 0 ? ` &nbsp;·&nbsp; <span style="color:#ca8a04;">${partialCount} ${__("partial")}</span>` : ""}
+			${unmatchedCount > 0 ? ` &nbsp;·&nbsp; <span style="color:#dc2626;">${unmatchedCount} ${__("unmatched")}</span>` : ""}
+		</div>`;
+		const autoCreateChecked = this._auto_create_items ? "checked" : "";
+		const autoCreateHtml = `<div style="margin-bottom:10px;font-size:13px;color:#374151;">
+			<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+				<input type="checkbox" id="fatura-auto-create-items" ${autoCreateChecked}
+					style="width:16px;height:16px;cursor:pointer;" />
+				<span>${__("Auto-create missing items in ERPNext (uses item name as item code, group: Services)")}</span>
+			</label>
+			<div id="fatura-items-summary" style="margin-top:5px;margin-left:22px;font-size:12px;color:#6b7280;">
+				${this._items_summary_text(items)}
+			</div>
 		</div>`;
 		const empty = items.length === 0
 			? `<p style="padding:20px 0;text-align:center;color:#6b7280;font-size:13px;">
@@ -452,7 +484,7 @@ window.FaturaWizard = class FaturaWizard {
 		</tr></thead>`;
 		const tbody = `<tbody id="fatura-items-tbody">${this._items_tbody_html(items)}</tbody>`;
 		return `<div style="padding:12px 16px;">
-			${legend}${empty}
+			${legend}${autoCreateHtml}${empty}
 			<div style="overflow-x:auto;">
 				<table style="width:100%;border-collapse:collapse;font-size:12px;">${thead}${tbody}</table>
 			</div>
@@ -468,20 +500,30 @@ window.FaturaWizard = class FaturaWizard {
 
 	_item_row_html(item, idx) {
 		const matched = item.matched_item || item.item_code || "";
-		const rowBg = matched ? "" : "background:#FFFDE7;";
 		const method = item.match_method || "";
 		const conf = Math.round((item.match_confidence || 0) * 100);
+		const isMatched = !!matched;
+		const isHighConf = conf >= 80;
+		const isMediumConf = conf >= 50 && conf < 80;
+		const isLowConf = conf > 0 && conf < 50;
+		const rowBg = isMatched ? (isHighConf ? "" : "background:#FFFBEB;") : "background:#FEF2F2;";
+		const badgeColor = isHighConf ? "#16a34a" : isMediumConf ? "#ca8a04" : isLowConf ? "#dc2626" : "#9ca3af";
+		const badgeIcon = isHighConf ? "✅" : isMediumConf ? "⚠️" : isLowConf ? "❌" : "—";
+		const badgeText = method ? `${badgeIcon} ${method}` : badgeIcon;
 		const tip = method ? `title="${frappe.utils.escape_html(method + (conf ? ` (${conf}%)` : ''))}"` : "";
-		const codeStyle = matched ? "border-color:#34A853;background:#f0fdf4;" : "";
+		const codeStyle = isMatched ? "border-color:#34A853;background:#f0fdf4;" : "border-color:#dc2626;background:#fef2f2;";
 		const qty = parseFloat(item.qty || 1);
 		const rate = parseFloat(item.rate || item.unit_price || 0);
 		const amount = parseFloat(item.amount || (qty * rate));
 		return `<tr data-idx="${idx}" style="border-bottom:1px solid #f3f4f6;${rowBg}">
 			<td style="padding:4px;color:#9ca3af;font-size:11px;text-align:center;">${idx + 1}</td>
 			<td style="padding:4px;">
-				<input type="text" class="fatura-item-code form-control input-xs" ${tip}
-					style="height:26px;font-size:11px;width:100%;${codeStyle}"
-					placeholder="${__("Search item…")}" value="${frappe.utils.escape_html(matched)}" />
+				<div style="display:flex;align-items:center;gap:4px;">
+					<input type="text" class="fatura-item-code form-control input-xs" ${tip}
+						style="height:26px;font-size:11px;width:100%;${codeStyle}"
+						placeholder="${__("Search item…")}" value="${frappe.utils.escape_html(matched)}" />
+					<span style="font-size:11px;color:${badgeColor};white-space:nowrap;" title="${frappe.utils.escape_html(method + (conf ? ` (${conf}%)` : ''))}">${badgeText}</span>
+				</div>
 			</td>
 			<td style="padding:4px;">
 				<input type="text" class="fatura-item-name form-control input-xs"
@@ -540,6 +582,11 @@ window.FaturaWizard = class FaturaWizard {
 				});
 				this._refresh_items_tbody();
 			});
+			// Auto-create checkbox — update state and summary line
+			$w.find("#fatura-auto-create-items").on("change", (e) => {
+				this._auto_create_items = e.target.checked;
+				$w.find("#fatura-items-summary").html(this._items_summary_text());
+			});
 		}, 50);
 	}
 
@@ -567,7 +614,8 @@ window.FaturaWizard = class FaturaWizard {
 
 	_do_confirm_items() {
 		this._sync_from_dom();
-		const items = this.confirmed_items.map(item => ({
+		const autoCreate = this._auto_create_items;
+		let items = this.confirmed_items.map(item => ({
 			item_code: item.matched_item || null,
 			item_name: item.item_name || "",
 			description: item.description || "",
@@ -579,14 +627,75 @@ window.FaturaWizard = class FaturaWizard {
 			match_method: item.match_method || (item.matched_item ? "Manual" : null),
 			match_confidence: item.match_confidence || 0,
 		}));
+
+		if (autoCreate) {
+			// Mark rows without an item_code for auto-creation
+			items = items.map(item => {
+				if (!item.item_code && !item.matched_item) {
+					item.auto_create = true;
+					// Use item_name as the item_code for creation
+					item.item_code = item.item_name || null;
+				}
+				return item;
+			});
+		} else {
+			// Skip rows with no item_code
+			const skipped = items.filter(item => !item.item_code && !item.matched_item).length;
+			items = items.filter(item => item.item_code || item.matched_item);
+			if (skipped > 0) {
+				frappe.msgprint(
+					__("{0} row(s) skipped because no item code was selected. Enable auto-create to include them.", [skipped])
+				);
+			}
+		}
+
+		this.dialog.get_primary_btn().prop("disabled", true).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${__("Saving…")}`);
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.confirm_items",
 			args: {
 				log_name: this.log_name,
 				confirmed_items: JSON.stringify(items),
 			},
-			callback: () => this._go_to(4),
+			callback: (r) => {
+				this.dialog.get_primary_btn().prop("disabled", false).html(__("Confirm Items"));
+				if (r.message && r.message.status === "ok") {
+					this._show_item_match_result(r.message);
+				} else {
+					frappe.msgprint(__("Failed to confirm items. Please try again."));
+				}
+			},
 		});
+	}
+
+	_show_item_match_result(result) {
+		const saved = result.saved || 0;
+		const warnings = result.warnings || [];
+		let warningHtml = "";
+		if (warnings.length > 0) {
+			warningHtml = `<div style="background:#fef3c7;border-radius:6px;padding:12px;margin-bottom:12px;font-size:12px;color:#92400e;">
+				${warnings.map(w => `<div>⚠️ ${w}</div>`).join("")}
+			</div>`;
+		}
+		this._set_content(`
+			<div style="padding:16px;text-align:center;">
+				<div style="font-size:32px;margin-bottom:12px;">✅</div>
+				<p style="font-weight:600;font-size:15px;color:#111827;margin-bottom:8px;">
+					${__("{0} items confirmed", [saved])}
+				</p>
+				<p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+					${__("Item mappings have been saved for future imports.")}
+				</p>
+				${warningHtml}
+				<button class="btn btn-primary btn-sm fatura-continue-review" style="margin-top:8px;">
+					${__("Continue to Review")} →
+				</button>
+			</div>
+		`);
+		setTimeout(() => {
+			this.dialog.fields_dict.step_content.$wrapper
+				.find(".fatura-continue-review")
+				.on("click", () => this._go_to(4));
+		}, 50);
 	}
 
 	// ── Step 4: Review & Populate ────────────────────────────────────────────
