@@ -12,6 +12,7 @@ from frappe import _
 @frappe.whitelist()
 def upload_invoice(file_url, source_doctype, source_docname):
     """Validate upload and create a Draft import log."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     _assert_doctype(source_doctype)
     from fatura_ai.api.extractor import validate_file
     validate_file(file_url)
@@ -34,6 +35,7 @@ def upload_invoice(file_url, source_doctype, source_docname):
 @frappe.whitelist()
 def run_ai_extraction(log_name):
     """Fetch log, run AI extraction, update log fields, return log as dict."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
     # Get attached file path
@@ -79,6 +81,7 @@ def run_ai_extraction(log_name):
 @frappe.whitelist()
 def match_supplier(log_name, vendor_name=None, tax_id=None):
     """Run 3-tier supplier matching using vendor_name and tax_id."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
     if not vendor_name and not tax_id:
@@ -101,6 +104,7 @@ def match_supplier(log_name, vendor_name=None, tax_id=None):
 @frappe.whitelist()
 def confirm_supplier(log_name, supplier):
     """User manually confirmed or overrode the matched supplier."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
     if not frappe.db.exists("Supplier", supplier):
         frappe.throw(_("Supplier {0} not found").format(supplier))
@@ -116,6 +120,7 @@ def confirm_supplier(log_name, supplier):
 @frappe.whitelist()
 def match_items(log_name, line_items_json=None):
     """Run 3-tier item matching on all extracted line items."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
     # Use passed-in items if provided (user may have edited them)
@@ -154,6 +159,7 @@ def match_items(log_name, line_items_json=None):
 @frappe.whitelist()
 def confirm_items(log_name, confirmed_items):
     """User confirmed or corrected item mappings; persist learned mappings."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     from fatura_ai.helpers.item_matching import persist_mappings
     items = frappe.parse_json(confirmed_items) if isinstance(confirmed_items, str) else confirmed_items
     log = frappe.get_doc("Fatura Import Log", log_name)
@@ -167,6 +173,7 @@ def confirm_items(log_name, confirmed_items):
 @frappe.whitelist()
 def get_review_summary(log_name):
     """Return everything the Review step needs to render its summary card."""
+    frappe.has_permission("Fatura Import Log", ptype="read", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
     extracted = frappe.parse_json(log.extracted_json or "{}")
     return {
@@ -184,6 +191,7 @@ def confirm_import(log_name):
     NEVER submits the document — only creates a Draft.
     لا يُقدَّم المستند أبداً — يُنشئ مسودة فقط
     """
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
     # Guard against double-import
