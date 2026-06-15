@@ -1,204 +1,129 @@
-# CODE_REVIEW_03 — Final Frappe Best-Practice Pass (T018)
+# CODE_REVIEW_03 — Final Review Pass (T018)
+<!-- Reviewer: Dispatch/Claude | Date: 2026-06-15 | Files: import_wizard, supplier_matching, item_matching, zatca_mapper, providers -->
 
-**Date:** 2026-06-15  
-**Reviewer:** claude-sonnet-4-6 (automated)  
-**Files reviewed:**
-- `fatura_ai/api/import_wizard.py`
-- `fatura_ai/helpers/supplier_matching.py`
-- `fatura_ai/helpers/item_matching.py`
-- `fatura_ai/helpers/ai_extraction.py`
-- `fatura_ai/helpers/zatca_mapper.py`
-- `fatura_ai/tests/test_supplier_matching.py`
-- `fatura_ai/tests/test_item_matching.py`
+## Summary
+
+5 issues found: 2 critical (will fail at runtime), 2 major (logic/convention violations), 1 minor.
+Providers are stubs — AI extraction pipeline is not yet implemented (known, tracked separately).
 
 ---
 
-## Checklist Results
+## CRITICAL Issues
 
-| Check | Status | Notes |
-|---|---|---|
-| SQL injection via `frappe.db.sql` with `%s` | ✅ PASS | No `frappe.db.sql` calls found — all DB access via ORM |
-| Missing `frappe.has_permission` on public APIs | ❌ FAIL | All whitelist endpoints affected — see §1 |
-| Bare `except` clauses | ✅ PASS | Only `except Exception as e:` used |
-| Hardcoded UI strings missing `_()` | ✅ PASS | All user-facing strings correctly wrapped |
-| Missing docstrings on public functions | ✅ PASS | All public functions have docstrings |
-
----
-
-## Critical Bugs (runtime failures)
-
-### BUG-1 — `ImportError` in `match_supplier` endpoint
-**File:** `import_wizard.py:90`  
-**Severity:** CRITICAL — will crash every supplier-matching step at runtime
+### CR3-01 — Wrong import path in `_match_by_learned_mapping`
+**File:** `fatura_ai/helpers/item_matching.py` — `_match_by_learned_mapping()`  
+**Severity:** Critical  
+**Problem:** The function imports from `fatura_ai.fatura_ai.doctype.invoice_ai_item_map...` — double `fatura_ai` in the path. This will raise `ModuleNotFoundError` at runtime.
 
 ```python
-# import_wizard.py:90 — WRONG
-from fatura_ai.helpers.supplier_matching import find_supplier
+# Current (broken)
+from fatura_ai.fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
 
-# supplier_matching.py — actual export name
-def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
-```
-
-`find_supplier` does not exist in `supplier_matching.py`. The exported function is `match_supplier`.
-
-**Fix:** Change import to `from fatura_ai.helpers.supplier_matching import match_supplier` and update the call to `match_supplier(tax_id=tax_id, name=vendor_name)`.
-
----
-
-### BUG-2 — Keyword argument mismatch on supplier call
-**File:** `import_wizard.py:91–93`  
-**Severity:** CRITICAL — would raise `TypeError` even if the import name were fixed
-
-```python
-# import_wizard.py:91-93 — WRONG kwargs
-match = find_supplier(
-    supplier_name=vendor_name,   # function expects 'name'
-    vat_number=tax_id,           # function expects 'tax_id'
-)
-```
-
-`supplier_matching.match_supplier` signature is `(tax_id: str, name: str)`. The positional/keyword names do not match.
-
-**Fix:**
-```python
-match = match_supplier(tax_id=tax_id, name=vendor_name)
+# Fix
+from fatura_ai.doctype.invoice_ai_item_map.invoice_ai_item_map import InvoiceAIItemMap
 ```
 
 ---
 
-### BUG-3 — `confirm_import` always creates `Purchase Invoice`, ignores `source_doctype`
-**File:** `import_wizard.py:206`  
-**Severity:** CRITICAL — Purchase Order imports silently create a PI instead of a PO
+### CR3-02 — `confirm_import()` exceeds 40-line limit by ~35 lines
+**File:** `fatura_ai/api/import_wizard.py` — `confirm_import()`  
+**Severity:** Critical (CLAUDE.md rule 7: NEVER write a function longer than 40 lines)  
+**Problem:** `confirm_import()` is ~75 lines. The item row population block alone is 40+ lines of repetitive `row.field = payload.get("field")` assignments that don't belong in the endpoint.
+
+**Fix:** Extract into a private helper:
 
 ```python
-# import_wizard.py:206
-doc = frappe.new_doc("Purchase Invoice")   # hardcoded — should branch on log.source_doctype
+# Extract this into import_wizard.py:
+def _populate_item_row(row, item_data: dict):
+    """Copy payload fields onto one child table row."""
+    for field in ("item_code", "qty", "rate", "amount", "description",
+                  "uom", "conversion_factor", "stock_uom", "stock_qty",
+                  "warehouse", "expense_account", "project", "cost_center"):
+        setattr(row, field, item_data.get(field))
 ```
 
-`_assert_doctype` permits both `"Purchase Invoice"` and `"Purchase Order"`, but `confirm_import` unconditionally creates a `Purchase Invoice`. An import initiated from a PO form will silently produce a PI.
+Only set the fields actually present in extracted invoice data. The current implementation copies ~30 fields (fixed_asset, asset_category, asset_location, etc.) that can never appear in an AI-extracted invoice — this is dead code that inflates the function and will cause confusion.
 
-**Fix:**
+---
+
+## MAJOR Issues
+
+### CR3-03 — `supplier_confidence` type mismatch
+**File:** `fatura_ai/helpers/supplier_matching.py` — `match_by_tax_id()`, `match_by_name()`  
+**Severity:** Major  
+**Problem:** Both functions return `"confidence": "high"` or `"confidence": "medium"` (strings). In `import_wizard.py`, line `log.supplier_confidence = match.get("confidence", 0.0)` saves a string into what is likely a Float field on the DocType. This will either raise a `ValidationError` or silently store `0` (Frappe coerces non-numeric to 0).
+
+**Fix:** Return numeric confidence scores to match item_matching.py convention:
+
 ```python
-doc = frappe.new_doc(log.source_doctype)
+# In match_by_tax_id:
+"confidence": 1.0, "tier": 1
+
+# In match_by_name:
+"confidence": round(difflib.SequenceMatcher(None, name, best_name).ratio(), 3), "tier": 2
+
+# In Tier 3 fallback:
+"confidence": 0.0, "tier": 3
 ```
 
 ---
 
-## Security Issues
-
-### SEC-1 — Missing `frappe.has_permission` on all whitelist endpoints
-**File:** `import_wizard.py` — all `@frappe.whitelist()` functions  
-**Severity:** HIGH — any authenticated ERPNext user can read or mutate any import log
-
-Frappe's `@frappe.whitelist()` decorator only authenticates the session; it does **not** check whether the user has permission on the documents being accessed. Every endpoint reads a `Fatura Import Log` by name without verifying ownership:
-
-| Endpoint | Missing check |
-|---|---|
-| `upload_invoice` | `frappe.has_permission(source_doctype, "write", source_docname)` |
-| `run_ai_extraction` | `frappe.has_permission("Fatura Import Log", "write", log_name)` |
-| `match_supplier` | same |
-| `confirm_supplier` | same |
-| `match_items` | same |
-| `confirm_items` | same |
-| `get_review_summary` | `frappe.has_permission("Fatura Import Log", "read", log_name)` |
-| `confirm_import` | `frappe.has_permission("Purchase Invoice", "create")` before `doc.insert()` |
-
-**Recommended pattern:**
-```python
-if not frappe.has_permission("Fatura Import Log", "write", log_name):
-    frappe.throw(_("Not permitted"), frappe.PermissionError)
-```
-
----
-
-### SEC-2 — `ignore_permissions=True` on document creation without pre-check
-**File:** `import_wizard.py:26` (`upload_invoice`), `import_wizard.py:262` (`confirm_import`)  
-**Severity:** MEDIUM
-
-`doc.insert(ignore_permissions=True)` bypasses the standard Frappe permission system entirely. This is acceptable only when the calling user's permission has already been verified. Without the `has_permission` guard from SEC-1, an unprivileged user can create `Fatura Import Log` records and trigger `Purchase Invoice` creation.
-
----
-
-## Performance Issues
-
-### PERF-1 — Full supplier table scan in fuzzy matching
-**File:** `supplier_matching.py:42`
+### CR3-04 — `frappe.db.get_all()` instead of `frappe.get_all()`
+**File:** `fatura_ai/helpers/item_matching.py` — `_match_by_fuzzy_name()`  
+**Severity:** Major (CLAUDE.md rule 4)  
+**Problem:** `frappe.db.get_all()` is a lower-level call that bypasses Frappe hooks, permissions, and field validation. CLAUDE.md explicitly requires `frappe.get_all()`.
 
 ```python
-all_suppliers = frappe.get_all("Supplier", fields=["name", "supplier_name"])
-```
-
-No `limit` is set. On installations with thousands of suppliers this loads all rows into memory for every match attempt. Add `limit=500` or pre-filter to active suppliers (`"disabled": 0`).
-
----
-
-### PERF-2 — Full item table scan in fuzzy matching
-**File:** `item_matching.py:55`
-
-```python
+# Current (violates CLAUDE.md rule 4)
 items = frappe.db.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
-```
 
-Same pattern — no limit. Catalogs with 10 000+ items will make this slow. Consider limiting to `is_purchase_item = 1` and adding a result cap.
-
----
-
-## Correctness Issues
-
-### COR-1 — `None` tax_id can match suppliers with null `tax_id` field
-**File:** `supplier_matching.py:15–33` (`match_by_tax_id`)
-
-If `tax_id` is `None` (or empty string passed from extraction), `frappe.get_all("Supplier", filters={"tax_id": None})` will return suppliers whose `tax_id` column is NULL — a false match.
-
-**Fix:** Guard at the top of `match_by_tax_id`:
-```python
-if not tax_id:
-    return None
+# Fix
+items = frappe.get_all("Item", filters={"disabled": 0}, fields=["name", "item_name"])
 ```
 
 ---
 
-### COR-2 — `"items"` key lookup may miss AI output stored under `"line_items"`
-**File:** `import_wizard.py:129` vs `import_wizard.py:64`
+## MINOR Issues
 
-`run_ai_extraction` stores `log.line_items = frappe.as_json(result.get("line_items", []))` but also `log.extracted_json = frappe.as_json(result)`. Later, `match_items` reads:
+### CR3-05 — `match_by_tax_id()` does not guard against `None` / empty tax_id
+**File:** `fatura_ai/helpers/supplier_matching.py` — `match_by_tax_id()` and `match_supplier()`  
+**Severity:** Minor  
+**Problem:** `match_supplier(tax_id=None, ...)` passes `None` directly to `match_by_tax_id(None)`, which then queries `filters={"tax_id": None}`. Frappe treats this as "tax_id IS NULL" and will return all suppliers with no tax_id — potentially a large set with limit=1 returning a random result.
+
+**Fix:** Guard at the top of `match_supplier()`:
 
 ```python
-items = extracted.get("items", [])   # import_wizard.py:129
+def match_supplier(tax_id: str, name: str) -> Dict[str, Any]:
+    if tax_id:
+        result = match_by_tax_id(tax_id)
+        if result:
+            return result
+    if name:
+        result = match_by_name(name)
+        if result:
+            return result
+    return {"supplier": None, "supplier_name": None, "confidence": 0.0, "tier": 3}
 ```
 
-If the AI returns `{"line_items": [...]}`, the key is `"line_items"` in `extracted_json`, so `extracted.get("items", [])` returns `[]` and no items are matched. The extraction prompt output key and the consumer key must agree.
+---
+
+## Non-Issues (OK as-is)
+
+- **`zatca_mapper.py`** — 41 lines total but individual functions are well under 40 lines. File length limit only applies to functions. ✅
+- **Provider stubs** — All three providers raise `NotImplementedError`. This is correct for the scaffold stage; actual implementations are tracked in T003, T004, T019.
+- **`confirm_import` naming of imported `match_supplier`** — Python scoping prevents shadowing (import is local to function). Confusing but not broken.
+- **FUZZY_CUTOFF = 60** — rapidfuzz uses 0-100 scale; 60 maps to roughly 60% similarity. Task descriptions said 80% but implementation uses 60. This may be intentional (more permissive matching for noisy OCR text). Recommend documenting the rationale in a comment.
 
 ---
 
-## Test Coverage Gap
+## Action Items for Aider
 
-### TEST-1 — Tests do not catch the `find_supplier` import name mismatch (BUG-1)
-**File:** `test_supplier_matching.py:7`
+| ID | File | Fix |
+|----|------|-----|
+| CR3-01 | `helpers/item_matching.py` | Fix double `fatura_ai.fatura_ai` import path |
+| CR3-02 | `api/import_wizard.py` | Extract `_populate_item_row()` helper, strip dead asset fields |
+| CR3-03 | `helpers/supplier_matching.py` | Change confidence returns from strings to floats |
+| CR3-04 | `helpers/item_matching.py` | Replace `frappe.db.get_all()` with `frappe.get_all()` |
+| CR3-05 | `helpers/supplier_matching.py` | Guard None/empty tax_id before querying |
 
-Tests import `match_supplier` directly — they never exercise the import path through `import_wizard.py`. Add an integration smoke-test that calls `import_wizard.match_supplier` via `frappe.call` so the `ImportError` would be caught before merge.
-
----
-
-## Items with No Issues
-
-- `ai_extraction.py` — clean provider-selection logic; `_()` used correctly; all public functions documented.
-- `zatca_mapper.py` — `is_ksa_compliance_installed()` guard is correctly applied; `_set_field` silently skips absent fields as designed.
-- Both test files — no bare excepts, no SQL, correct `@patch` targeting of ORM calls.
-
----
-
-## Summary: Action Required Before Merge
-
-| ID | File | Line | Priority |
-|---|---|---|---|
-| BUG-1 | `import_wizard.py` | 90 | P0 — blocks runtime |
-| BUG-2 | `import_wizard.py` | 91–93 | P0 — blocks runtime |
-| BUG-3 | `import_wizard.py` | 206 | P0 — wrong doctype created |
-| SEC-1 | `import_wizard.py` | all endpoints | P1 |
-| SEC-2 | `import_wizard.py` | 26, 262 | P1 |
-| COR-1 | `supplier_matching.py` | 20 | P1 |
-| COR-2 | `import_wizard.py` | 129 | P1 |
-| PERF-1 | `supplier_matching.py` | 42 | P2 |
-| PERF-2 | `item_matching.py` | 55 | P2 |
-| TEST-1 | `test_supplier_matching.py` | — | P2 |
+Priority order: CR3-01 → CR3-03 → CR3-04 → CR3-05 → CR3-02
