@@ -18,6 +18,9 @@
   "section_break_google",
   "google_api_key",
   "google_model",
+  "section_break_deepseek",
+  "deepseek_api_key",
+  "deepseek_model",
   "section_break_matching",
   "fuzzy_match_threshold",
   "column_break_2",
@@ -34,7 +37,7 @@
    "fieldname": "api_provider",
    "fieldtype": "Select",
    "label": "Default AI Provider",
-   "options": "Anthropic\nOpenAI\nGoogle",
+   "options": "Anthropic\nOpenAI\nGoogle\nDeepSeek",
    "reqd": 1
   },
   {
@@ -96,6 +99,23 @@
    "label": "Google Model"
   },
   {
+   "fieldname": "section_break_deepseek",
+   "fieldtype": "Section Break",
+   "label": "DeepSeek"
+  },
+  {
+   "fieldname": "deepseek_api_key",
+   "fieldtype": "Password",
+   "label": "DeepSeek API Key",
+   "description": "Get your key at https://platform.deepseek.com"
+  },
+  {
+   "default": "deepseek-chat",
+   "fieldname": "deepseek_model",
+   "fieldtype": "Data",
+   "label": "DeepSeek Model"
+  },
+  {
    "fieldname": "section_break_matching",
    "fieldtype": "Section Break",
    "label": "Matching & Learning"
@@ -119,7 +139,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-14 00:00:00.000000",
+ "modified": "2026-06-15 09:10:00.000000",
  "modified_by": "Administrator",
  "module": "Fatura AI",
  "name": "Fatura AI Settings",
