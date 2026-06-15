@@ -91,39 +91,40 @@ def run_ai_extraction(log_name):
 def match_supplier(log_name, vendor_name=None, tax_id=None):
     """Run 3-tier supplier matching using vendor_name and tax_id."""
     frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
-    log = frappe.get_doc("Fatura Import Log", log_name)
+    try:
+        log = frappe.get_doc("Fatura Import Log", log_name)
 
-    # Read from extracted log data if not passed explicitly
-    extracted = frappe.parse_json(log.extracted_json or "{}")
-    if not vendor_name:
-        vendor_name = (
-            extracted.get("vendor_name")
-            or extracted.get("seller_name")
-            or extracted.get("supplier_name")
-        )
-    if not tax_id:
-        tax_id = (
-            extracted.get("tax_id")
-            or extracted.get("vat_number")
-            or extracted.get("seller_vat")
-            or extracted.get("seller_vat_number")
-        )
+        extracted = frappe.parse_json(log.extracted_json or "{}")
+        if not vendor_name:
+            vendor_name = (
+                extracted.get("vendor_name")
+                or extracted.get("seller_name")
+                or extracted.get("supplier_name")
+            )
+        if not tax_id:
+            tax_id = (
+                extracted.get("tax_id")
+                or extracted.get("vat_number")
+                or extracted.get("seller_vat")
+                or extracted.get("seller_vat_number")
+            )
 
-    if not vendor_name and not tax_id:
-        frappe.throw(
-            _("Cannot match supplier: no name or VAT in extracted data")
-        )
+        if not vendor_name and not tax_id:
+            return {"status": "error", "message": _("Cannot match supplier: no name or VAT in extracted data")}
 
-    from fatura_ai.helpers.supplier_matching import match_supplier
-    match = match_supplier(tax_id=tax_id, name=vendor_name)
+        from fatura_ai.helpers.supplier_matching import match_supplier as _do_match
+        match = _do_match(tax_id=tax_id, name=vendor_name)
 
-    log.supplier_match_method = match.get("method")
-    log.matched_supplier = match.get("supplier")
-    log.supplier_confidence = match.get("confidence", 0.0)
-    log.save(ignore_permissions=True)
-    frappe.db.commit()
+        log.supplier_match_method = match.get("method")
+        log.matched_supplier = match.get("supplier")
+        log.supplier_confidence = match.get("confidence", 0.0)
+        log.save(ignore_permissions=True)
+        frappe.db.commit()
 
-    return match
+        return match
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Fatura AI match_supplier")
+        return {"status": "error", "message": frappe.get_traceback()}
 
 
 @frappe.whitelist()

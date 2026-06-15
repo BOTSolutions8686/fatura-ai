@@ -150,13 +150,46 @@ window.FaturaWizard = class FaturaWizard {
 		this.dialog.set_primary_action(__("Confirm Supplier"), () => this._do_confirm_supplier());
 		this._set_content(`<div style="padding:16px;color:#6b7280;">${__("Matching supplier…")}</div>`);
 
+		let settled = false;
+		const timeoutId = setTimeout(() => {
+			if (!settled) {
+				settled = true;
+				this._show_supplier_error(__("Supplier matching is taking too long — please try again"));
+			}
+		}, 15000);
+
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.match_supplier",
 			args: { log_name: this.log_name },
 			callback: (r) => {
+				clearTimeout(timeoutId);
+				if (settled) return;
+				settled = true;
+				if (r.exc || (r.message && r.message.status === "error")) {
+					const msg = (r.message && r.message.message) || r.exc || __("Supplier matching failed unexpectedly");
+					this._show_supplier_error(msg);
+					return;
+				}
 				if (r.message) this._show_supplier_match(r.message);
 			},
 		});
+	}
+
+	_show_supplier_error(msg) {
+		this._set_content(`
+			<div style="padding:16px;">
+				<div style="background:#fef2f2; border-radius:6px; padding:12px; font-size:13px; color:#991b1b; margin-bottom:12px;">
+					❌ <strong>${__("Supplier matching failed")}</strong><br><br>
+					<code style="font-size:11px; white-space:pre-wrap; word-break:break-all;">${frappe.utils.escape_html(String(msg))}</code>
+				</div>
+				<button class="btn btn-default btn-sm fatura-retry-supplier">${__("Retry")}</button>
+			</div>
+		`);
+		setTimeout(() => {
+			this.dialog.fields_dict.step_content.$wrapper
+				.find(".fatura-retry-supplier")
+				.on("click", () => this._render_supplier());
+		}, 50);
 	}
 
 	_show_supplier_match(match) {

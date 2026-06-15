@@ -11,7 +11,6 @@ app_version = "1.0.0"
 # DocType-specific JS injected on form load
 doctype_js = {
     "Purchase Invoice": "public/js/purchase_invoice.js",
-    "Purchase Order": "public/js/purchase_order.js",
 }
 
 # Global JS loaded on every page (wizard + utils)
