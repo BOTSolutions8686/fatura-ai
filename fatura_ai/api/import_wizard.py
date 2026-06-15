@@ -123,11 +123,46 @@ def confirm_supplier(log_name, supplier):
     log = frappe.get_doc("Fatura Import Log", log_name)
     if not frappe.db.exists("Supplier", supplier):
         frappe.throw(_("Supplier {0} not found").format(supplier))
+    _update_log_supplier(log_name, supplier, "Manual")
+    return {"status": "ok", "supplier": supplier}
+
+
+@frappe.whitelist()
+def create_supplier(log_name, supplier_name, tax_id=None):
+    """Auto-create a minimal Supplier record from extracted invoice data."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
+    if not supplier_name:
+        frappe.throw(_("Supplier name is required"))
+
+    # Return existing supplier if already in system
+    existing = frappe.db.get_value("Supplier", {"supplier_name": supplier_name}, "name")
+    if not existing and tax_id:
+        existing = frappe.db.get_value("Supplier", {"tax_id": tax_id}, "name")
+    if existing:
+        _update_log_supplier(log_name, existing, "Auto-Created")
+        return {"supplier": existing, "status": "existing"}
+
+    doc = frappe.get_doc({
+        "doctype": "Supplier",
+        "supplier_name": supplier_name,
+        "supplier_group": "All Supplier Groups",
+        "supplier_type": "Company",
+    })
+    if tax_id:
+        doc.tax_id = tax_id
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    _update_log_supplier(log_name, doc.name, "Auto-Created")
+    return {"supplier": doc.name, "status": "created"}
+
+
+def _update_log_supplier(log_name, supplier, method):
+    log = frappe.get_doc("Fatura Import Log", log_name)
     log.matched_supplier = supplier
-    log.supplier_match_method = "Manual"
+    log.supplier_match_method = method
     log.save(ignore_permissions=True)
     frappe.db.commit()
-    return {"status": "ok", "supplier": supplier}
 
 
 # ── Step 3: Item Matching ───────────────────────────────────────────────────

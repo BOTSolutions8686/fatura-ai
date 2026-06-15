@@ -24,16 +24,29 @@ def _normalise(text: str) -> str:
 def match_by_tax_id(tax_id: str) -> Optional[Dict[str, Any]]:
     """
     Tier 1 — exact match on tax_id field.
+    If multiple suppliers share the same VAT (holding + subsidiaries), returns
+    method="VAT Ambiguous" with a candidates list so the caller can prompt the user.
     المستوى الأول — تطابق تام على حقل الرقم الضريبي
     """
     suppliers = frappe.get_all(
         "Supplier",
         filters={"tax_id": tax_id},
         fields=["name", "supplier_name"],
-        limit=1,
+        limit=20,
     )
     if not suppliers:
         return None
+    if len(suppliers) > 1:
+        return {
+            "supplier": None,
+            "supplier_name": None,
+            "confidence": 1.0,
+            "method": "VAT Ambiguous",
+            "candidates": [
+                {"name": s["name"], "supplier_name": s["supplier_name"]}
+                for s in suppliers
+            ],
+        }
     s = suppliers[0]
     return {
         "supplier": s["name"],

@@ -160,6 +160,20 @@ window.FaturaWizard = class FaturaWizard {
 
 	_show_supplier_match(match) {
 		this.confirmed_supplier = match.supplier || "";
+		this._supplier_match = match;
+
+		// T029 — multiple suppliers share the same VAT
+		if (match.method === "VAT Ambiguous") {
+			this._show_vat_ambiguous(match);
+			return;
+		}
+
+		// T028 — no match found at all: offer auto-create
+		if (!match.supplier) {
+			this._show_supplier_autocreate(match);
+			return;
+		}
+
 		const confidence_pct = Math.round((match.confidence || 0) * 100);
 		const confidence_color = confidence_pct >= 80 ? "#16a34a" : confidence_pct >= 50 ? "#d97706" : "#dc2626";
 		const supplier_label = match.supplier_name || match.supplier || __("No match found");
@@ -197,13 +211,112 @@ window.FaturaWizard = class FaturaWizard {
 			</div>
 		`);
 
-		// Wire up supplier autocomplete after DOM settles
 		setTimeout(() => {
 			const $input = this.dialog.fields_dict.step_content.$wrapper.find("#fatura-supplier-override");
 			$input.on("change keyup", () => {
 				this.confirmed_supplier = $input.val();
 			});
 		}, 50);
+	}
+
+	// T029 — VAT matched multiple suppliers; let user pick one
+	_show_vat_ambiguous(match) {
+		this.dialog.set_primary_action(__("Confirm Supplier"), () => this._do_confirm_supplier());
+		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		const vendor = extracted.vendor_name || (this.extracted || {}).vendor_name || "—";
+		const candidates = match.candidates || [];
+		const rows = candidates.map((c, i) => `
+			<label style="display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid #e5e7eb; cursor:pointer;">
+				<input type="radio" name="fatura-vat-candidate" value="${c.name}" ${i === 0 ? "checked" : ""} />
+				<span style="font-size:14px;">${c.supplier_name || c.name}</span>
+			</label>`).join("");
+		this._set_content(`
+			<div style="padding:16px;">
+				<div style="background:#fef3c7; border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px; color:#92400e;">
+					⚠️ ${__("Multiple suppliers share this VAT number. Please select the correct one.")}
+				</div>
+				<p style="font-size:13px; color:#6b7280; margin-bottom:12px;">
+					${__("AI extracted vendor")}: <strong>${vendor}</strong>
+				</p>
+				<div>${rows}</div>
+			</div>
+		`);
+		setTimeout(() => {
+			const $wrapper = this.dialog.fields_dict.step_content.$wrapper;
+			$wrapper.find("input[name=fatura-vat-candidate]").on("change", (e) => {
+				this.confirmed_supplier = e.target.value;
+			});
+			// Default to first candidate
+			if (candidates.length) this.confirmed_supplier = candidates[0].name;
+		}, 50);
+	}
+
+	// T028 — no supplier found; offer to auto-create from extracted data
+	_show_supplier_autocreate(match) {
+		this.dialog.set_primary_action(__("Create & Continue"), () => this._do_create_supplier());
+		const extracted = frappe.parse_json(this.extracted?.extracted_json || "{}") || {};
+		const vendor = extracted.vendor_name || extracted.seller_name || extracted.supplier_name || "";
+		const tax_id = extracted.tax_id || extracted.vat_number || extracted.seller_vat || "";
+		this._autocreate_name = vendor;
+		this._autocreate_tax_id = tax_id;
+		this._set_content(`
+			<div style="padding:16px;">
+				<div style="background:#fef2f2; border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px; color:#991b1b;">
+					❌ ${__("No matching supplier found in ERPNext.")}
+				</div>
+				<p style="font-size:13px; color:#374151; margin-bottom:16px;">
+					${__("Auto-create a new supplier from the extracted invoice data:")}
+				</p>
+				<div style="margin-bottom:12px;">
+					<label style="font-size:13px; color:#374151; display:block; margin-bottom:4px;">${__("Supplier Name")}</label>
+					<input id="fatura-new-supplier-name" type="text" class="form-control input-sm" value="${vendor}" />
+				</div>
+				<div style="margin-bottom:12px;">
+					<label style="font-size:13px; color:#374151; display:block; margin-bottom:4px;">${__("VAT Number")}</label>
+					<input id="fatura-new-supplier-vat" type="text" class="form-control input-sm" value="${tax_id}" />
+				</div>
+				<p style="font-size:12px; color:#6b7280;">
+					${__("Or type an existing supplier name below to link instead:")}
+				</p>
+				<input id="fatura-supplier-override" type="text" class="form-control input-sm"
+					placeholder="${__("Existing supplier name…")}" value="" />
+			</div>
+		`);
+		setTimeout(() => {
+			const $w = this.dialog.fields_dict.step_content.$wrapper;
+			$w.find("#fatura-new-supplier-name").on("change keyup", (e) => { this._autocreate_name = e.target.value.trim(); });
+			$w.find("#fatura-new-supplier-vat").on("change keyup", (e) => { this._autocreate_tax_id = e.target.value.trim(); });
+			$w.find("#fatura-supplier-override").on("change keyup", (e) => { this.confirmed_supplier = e.target.value.trim(); });
+		}, 50);
+	}
+
+	_do_create_supplier() {
+		// If user typed an existing supplier name in the override box, use confirm_supplier instead
+		if (this.confirmed_supplier) {
+			this._do_confirm_supplier();
+			return;
+		}
+		if (!this._autocreate_name) {
+			frappe.msgprint(__("Please enter a supplier name"));
+			return;
+		}
+		frappe.call({
+			method: "fatura_ai.api.import_wizard.create_supplier",
+			args: {
+				log_name: this.log_name,
+				supplier_name: this._autocreate_name,
+				tax_id: this._autocreate_tax_id || null,
+			},
+			callback: (r) => {
+				if (r.message && r.message.supplier) {
+					frappe.show_alert({
+						message: __("Supplier created: {0}", [r.message.supplier]),
+						indicator: "green",
+					});
+					this._go_to(3);
+				}
+			},
+		});
 	}
 
 	_do_confirm_supplier() {
