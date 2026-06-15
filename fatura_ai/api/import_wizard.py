@@ -236,8 +236,24 @@ def confirm_import(log_name):
     doc.due_date = payload.get("due_date")
 
     for item_data in payload.get("items", []):
+        item_code = item_data.get("item_code")
+        if not item_code:
+            continue
+        # Auto-create item if it doesn't exist in ERPNext
+        if not frappe.db.exists("Item", item_code):
+            new_item = frappe.get_doc({
+                "doctype": "Item",
+                "item_code": item_code,
+                "item_name": item_data.get("description") or item_code,
+                "item_group": "All Item Groups",
+                "stock_uom": "Nos",
+                "is_stock_item": 0,
+                "is_purchase_item": 1,
+            })
+            new_item.insert(ignore_permissions=True)
+            frappe.db.commit()
         row = doc.append("items", {})
-        row.item_code = item_data.get("item_code")
+        row.item_code = item_code
         row.qty = item_data.get("qty", 1)
         row.rate = item_data.get("rate", 0)
         row.description = item_data.get("description")

@@ -240,42 +240,76 @@ window.FaturaWizard = class FaturaWizard {
 	_show_items(data) {
 		const items = data.items || [];
 		const s = data.summary || {};
+		// Store mutable copy so edits persist
+		this.confirmed_items = items.map(item => Object.assign({}, item));
+
 		const rows = items.map((item, idx) => {
 			const desc = item.description || item.item_name || "—";
-			const match = item.matched_item || `<span style="color:#dc2626;">${__("Unmatched")}</span>`;
+			const matched = item.matched_item || "";
 			const conf = Math.round((item.confidence || 0) * 100);
+			const confColor = conf >= 80 ? "#16a34a" : conf >= 40 ? "#d97706" : "#dc2626";
+			const badge = matched
+				? `<span style="color:${confColor}; font-size:11px;">${conf}% match</span>`
+				: `<span style="color:#dc2626; font-size:11px;">${__("No match — will create")}</span>`;
 			return `<tr style="border-bottom:1px solid #e5e7eb;">
-				<td style="padding:8px 4px; font-size:13px;">${desc}</td>
-				<td style="padding:8px 4px; font-size:13px;">${match}</td>
+				<td style="padding:8px 4px; font-size:13px; max-width:200px; word-wrap:break-word;">${desc}</td>
+				<td style="padding:6px 4px;">
+					<input
+						data-idx="${idx}"
+						class="fatura-item-input form-control input-xs"
+						style="font-size:12px; height:28px;"
+						placeholder="${__("Item code / name")}"
+						value="${matched}" />
+					<div style="margin-top:2px;">${badge}</div>
+				</td>
 				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.qty || 1}</td>
 				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.rate || 0}</td>
-				<td style="padding:8px 4px; font-size:13px; text-align:center; color:${conf >= 80 ? "#16a34a" : "#d97706"};">${conf}%</td>
 			</tr>`;
 		}).join("");
 
 		this._set_content(`
 			<div style="padding:16px;">
 				<div style="margin-bottom:12px; font-size:13px; color:#6b7280;">
-					${s.matched || 0}/${s.total || 0} ${__("items matched")}
-					${s.unmatched ? ` · <span style="color:#dc2626;">${s.unmatched} ${__("unmatched")}</span>` : ""}
+					${s.matched || 0}/${s.total || 0} ${__("items matched")} &nbsp;·&nbsp;
+					${__("Edit item codes below. Blank rows will be skipped. New codes will be created automatically.")}
 				</div>
+				<div style="overflow-x:auto;">
 				<table style="width:100%; border-collapse:collapse; font-size:13px;">
 					<thead>
 						<tr style="border-bottom:2px solid #e5e7eb; color:#6b7280;">
-							<th style="padding:6px 4px; text-align:left; font-weight:500;">${__("Description")}</th>
-							<th style="padding:6px 4px; text-align:left; font-weight:500;">${__("Item Code")}</th>
+							<th style="padding:6px 4px; text-align:left; font-weight:500; width:45%;">${__("Description from Invoice")}</th>
+							<th style="padding:6px 4px; text-align:left; font-weight:500; width:35%;">${__("ERPNext Item Code")}</th>
 							<th style="padding:6px 4px; text-align:right; font-weight:500;">${__("Qty")}</th>
 							<th style="padding:6px 4px; text-align:right; font-weight:500;">${__("Rate")}</th>
-							<th style="padding:6px 4px; text-align:center; font-weight:500;">${__("Conf.")}</th>
 						</tr>
 					</thead>
 					<tbody>${rows}</tbody>
 				</table>
+				</div>
 			</div>
 		`);
+
+		// Wire up input changes
+		setTimeout(() => {
+			this.dialog.fields_dict.step_content.$wrapper
+				.find(".fatura-item-input")
+				.on("change keyup", (e) => {
+					const idx = parseInt($(e.target).data("idx"));
+					this.confirmed_items[idx].matched_item = e.target.value.trim();
+				});
+		}, 50);
 	}
 
 	_do_confirm_items() {
+		// Collect final values from inputs (in case of rapid changes)
+		const $wrapper = this.dialog.fields_dict.step_content.$wrapper;
+		$wrapper.find(".fatura-item-input").each((_, el) => {
+			const idx = parseInt($(el).data("idx"));
+			if (this.confirmed_items[idx]) {
+				this.confirmed_items[idx].matched_item = el.value.trim();
+			}
+		});
+
 		frappe.call({
 			method: "fatura_ai.api.import_wizard.confirm_items",
 			args: {
