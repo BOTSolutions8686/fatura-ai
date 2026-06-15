@@ -17,13 +17,19 @@ def upload_invoice(file_url, source_doctype, source_docname):
     from fatura_ai.api.extractor import validate_file
     validate_file(file_url)
 
+    # source_docname may be a temp name (e.g. "new-purchase-invoice-xxx") when
+    # the user opens the wizard on an unsaved form — skip link validation so
+    # Frappe doesn't reject it.
+    real_docname = source_docname if source_docname and not source_docname.startswith("new-") else None
+
     log = frappe.get_doc({
         "doctype": "Fatura Import Log",
         "status": "Draft",
         "source_doctype": source_doctype,
-        "source_docname": source_docname,
+        "source_docname": real_docname,
         "file_url": file_url,
     })
+    log.flags.ignore_links = True
     log.insert(ignore_permissions=True)
     frappe.db.commit()
 
