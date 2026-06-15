@@ -52,13 +52,20 @@ def _map_item(confirmed_item):
     )
     raw_desc = confirmed_item.get("description") or ""
     description = unicodedata.normalize("NFC", raw_desc)
+    item_code = confirmed_item.get("item_code") or confirmed_item.get("matched_item")
+    item_name = (confirmed_item.get("item_name") or "")[:140]
+    qty = float(confirmed_item.get("qty", 1) or 1)
+    rate_f = float(rate or 0)
+    uom = confirmed_item.get("uom") or confirmed_item.get("unit") or "Nos"
+    amount = float(confirmed_item.get("amount") or (qty * rate_f))
     return {
-        "item_code": confirmed_item.get("item_code") or confirmed_item.get("matched_item"),
-        "item_name": (confirmed_item.get("item_name") or "")[:140],
-        "qty": float(confirmed_item.get("qty", 1) or 1),
-        "rate": float(rate or 0),
-        "uom": confirmed_item.get("uom") or confirmed_item.get("unit") or "Nos",
+        "item_code": item_code,
+        "item_name": item_name,
+        "qty": qty,
+        "rate": rate_f,
+        "uom": uom,
         "description": description,
+        "amount": amount,
     }
 
 
