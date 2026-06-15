@@ -3,7 +3,7 @@
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔴 In Progress
-- [T015] Write unit tests for item matching | aider | P1 | IN_PROGRESS | T006
+- [T015] Write unit tests for item matching | aider | P1 | DONE | T006
 
 ## 📋 Backlog
 
