@@ -28,7 +28,7 @@ def validate_file(file_url):
 def build_doctype_payload(log, extracted, confirmed_items):
     """
     Map extracted + confirmed data to ERPNext field names.
-    Returns a dict the JS form_populator writes to the open document.
+    Returns a dict the form_populator writes to the open document.
     """
     return {
         "supplier": log.matched_supplier,
@@ -36,7 +36,7 @@ def build_doctype_payload(log, extracted, confirmed_items):
         "bill_date": extracted.get("invoice_date"),
         "due_date": extracted.get("due_date"),
         "items": [_map_item(i) for i in confirmed_items if i.get("matched_item")],
-        "taxes": _build_taxes(extracted),
+        "taxes_and_charges": _get_default_tax_template(log.matched_supplier),
     }
 
 
@@ -53,12 +53,25 @@ def _map_item(confirmed_item):
         "item_code": confirmed_item["matched_item"],
         "qty": confirmed_item.get("qty", 1),
         "rate": float(rate),
+        "uom": confirmed_item.get("uom") or confirmed_item.get("unit") or "Nos",
         "description": confirmed_item.get("description", ""),
     }
 
 
-def _build_taxes(extracted):
-    vat = extracted.get("vat_amount", 0)
-    if not vat:
-        return []
-    return [{"charge_type": "Actual", "tax_amount": vat, "description": _("VAT")}]
+def _get_default_tax_template(supplier):
+    """Return the default Purchase Taxes and Charges template for the company, or None."""
+    try:
+        company = (
+            frappe.db.get_value("Supplier", supplier, "default_company")
+            or frappe.defaults.get_user_default("Company")
+            or (frappe.get_all("Company", limit=1) or [{}])[0].get("name")
+        )
+        if not company:
+            return None
+        return frappe.db.get_value(
+            "Purchase Taxes and Charges Template",
+            {"company": company, "is_default": 1},
+            "name",
+        )
+    except Exception:
+        return None

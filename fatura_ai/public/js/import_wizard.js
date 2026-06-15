@@ -263,7 +263,7 @@ window.FaturaWizard = class FaturaWizard {
 					<div style="margin-top:2px;">${badge}</div>
 				</td>
 				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.qty || 1}</td>
-				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.rate || 0}</td>
+				<td style="padding:8px 4px; font-size:13px; text-align:right;">${item.rate || item.unit_price || 0}</td>
 			</tr>`;
 		}).join("");
 

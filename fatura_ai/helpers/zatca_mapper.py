@@ -21,13 +21,13 @@ def map_zatca_fields(log_doc, pi_doc):
                extracted.get("tax_id") or extracted.get("vat_number"))
 
     _set_field(pi_doc, "custom_zatca_invoice_reference",
-               extracted.get("invoice_uuid") or log_doc.invoice_number)
+               extracted.get("invoice_uuid") or extracted.get("invoice_number"))
 
     _set_field(pi_doc, "custom_supply_date",
-               extracted.get("supply_date") or log_doc.invoice_date)
+               extracted.get("supply_date") or extracted.get("invoice_date"))
 
     _set_field(pi_doc, "custom_vat_amount",
-               extracted.get("vat_amount") or log_doc.vat_amount)
+               extracted.get("vat_amount"))
 
     pi_doc.save(ignore_permissions=True)
     return True

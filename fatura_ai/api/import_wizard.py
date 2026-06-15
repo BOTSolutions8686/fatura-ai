@@ -256,14 +256,12 @@ def confirm_import(log_name):
         row.rate = item_data.get("rate", 0)
         row.description = item_data.get("description")
 
-    for tax_data in payload.get("taxes", []):
-        row = doc.append("taxes", {})
-        row.charge_type = tax_data.get("charge_type", "Actual")
-        row.tax_amount = tax_data.get("tax_amount", 0)
-        row.description = tax_data.get("description", "")
-        row.account_head = tax_data.get("account_head", "")
+    # Apply default tax template — ERPNext populates account rows automatically
+    taxes_and_charges = payload.get("taxes_and_charges")
+    if taxes_and_charges:
+        doc.taxes_and_charges = taxes_and_charges
 
-    doc.insert(ignore_permissions=True)
+        doc.insert(ignore_permissions=True)
     frappe.db.commit()
 
     from fatura_ai.helpers.zatca_mapper import map_zatca_fields
