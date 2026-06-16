@@ -1,5 +1,5 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-15 23:11 -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-16 07:30 -->
 <!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔄 In Progress
@@ -88,3 +88,4 @@
 - [T029] VAT-ambiguous multi-supplier picker in wizard | opencode | P1 | DONE | T005
 - [T030] Duplicate invoice detection + force-create UI in confirm_import | aider | P1 | DONE | T011
 - [T034] Sanity warnings after confirm_import (non-blocking) | aider | P2 | DONE | T030
+- [T042] Accept image file uploads in wizard (JPG/PNG/WEBP) | aider | P0 | DONE | none
