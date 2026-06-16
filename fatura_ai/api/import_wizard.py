@@ -3,8 +3,10 @@ Wizard API endpoints — one per wizard step.
 All endpoints are @frappe.whitelist() and return JSON-serialisable dicts.
 تحكم كامل في خطوات معالج الاستيراد
 """
+import io
 import frappe
 from frappe import _
+from PIL import Image
 
 
 # ── Step 0: Upload ──────────────────────────────────────────────────────────
@@ -33,7 +35,8 @@ def upload_invoice(file_url, source_doctype, source_docname):
     log.insert(ignore_permissions=True)
     frappe.db.commit()
 
-    return {"log_name": log.name, "status": "ok"}
+    file_type = _detect_file_type(file_url)
+    return {"log_name": log.name, "status": "ok", "file_type": file_type}
 
 
 # ── Step 1: AI Extraction ───────────────────────────────────────────────────
@@ -52,9 +55,39 @@ def run_ai_extraction(log_name):
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
+    # Detect file type (image or PDF)
+    file_type = _detect_file_type(log.file_url)
+    is_image = file_type == "image"
+
+    # If image, convert to single-page PDF before extraction
+    if is_image:
+        try:
+            img = Image.open(file_path)
+            pdf_bytes = io.BytesIO()
+            img.save(pdf_bytes, format="PDF")
+            pdf_bytes.seek(0)
+            # Create a temporary File doc for the converted PDF
+            pdf_file = frappe.get_doc({
+                "doctype": "File",
+                "file_name": "converted_invoice.pdf",
+                "content": pdf_bytes.getvalue(),
+                "is_private": 1,
+            })
+            pdf_file.insert(ignore_permissions=True)
+            frappe.db.commit()
+            extraction_url = pdf_file.file_url
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "Fatura AI image-to-PDF conversion")
+            frappe.throw(
+                _("Failed to convert image to PDF: {0}").format(str(e)),
+                frappe.ValidationError,
+            )
+    else:
+        extraction_url = log.file_url
+
     try:
         from fatura_ai.helpers.ai_extraction import extract_invoice_data
-        result = extract_invoice_data(log.file_url)
+        result = extract_invoice_data(extraction_url)
     except Exception as e:
         log.mark_failed(str(e))
         frappe.db.commit()
@@ -66,8 +99,10 @@ def run_ai_extraction(log_name):
     # T039 — merge ZATCA QR data (ground truth) over AI result
     result = _merge_qr_data(result, file_path, log.file_url)
 
-    # Detect image-based PDF so the wizard can warn the user
-    if log.file_url and log.file_url.lower().endswith(".pdf"):
+    # Set pdf_type for image files
+    if is_image:
+        result["pdf_type"] = "image"
+    elif log.file_url and log.file_url.lower().endswith(".pdf"):
         try:
             from fatura_ai.helpers.pdf_extractor import detect_pdf_type
             result["pdf_type"] = detect_pdf_type(file_path)
@@ -514,6 +549,14 @@ def _assert_doctype(source_doctype):
     allowed = {"Purchase Invoice", "Purchase Order"}
     if source_doctype not in allowed:
         frappe.throw(_("Invalid source doctype: {0}").format(source_doctype))
+
+
+def _detect_file_type(file_url: str) -> str:
+    """Return 'image' for image extensions, 'pdf' for PDF, else 'pdf'."""
+    ext = file_url.rsplit(".", 1)[-1].lower() if "." in file_url else ""
+    if ext in ("png", "jpg", "jpeg", "webp", "tiff", "tif"):
+        return "image"
+    return "pdf"
 
 
 def _merge_qr_data(result: dict, file_path: str, file_url: str) -> dict:

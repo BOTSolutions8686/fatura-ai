@@ -90,9 +90,15 @@ window.FaturaWizard = class FaturaWizard {
 						on_success: (file_doc) => {
 							this.file_url = file_doc.file_url;
 							const name = file_doc.file_name || file_doc.file_url;
+							// Determine file type from extension
+							const ext = (file_doc.file_url || "").split(".").pop().toLowerCase();
+							const isImage = ["png","jpg","jpeg","webp","tiff","tif"].includes(ext);
+							const label = isImage
+								? __("Invoice image uploaded")
+								: __("Invoice PDF uploaded");
 							this.dialog.fields_dict.step_content.$wrapper
 								.find(".fatura-file-name")
-								.html(`✅ <strong>${name}</strong>`);
+								.html(`✅ <strong>${name}</strong><br><span style="font-size:11px;color:#6b7280;">${label}</span>`);
 						},
 					});
 				});

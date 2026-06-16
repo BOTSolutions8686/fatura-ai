@@ -13,9 +13,10 @@
 
 ### T042 — Accept image file uploads in wizard
 - Allow JPG, PNG, WEBP uploads in addition to PDF
-- If image uploaded: convert to single-page PDF using `pdf2image`/`Pillow` before processing, OR process as image directly
+- If image uploaded: convert to single-page PDF using Pillow before processing
 - Update file validation in `run_ai_extraction` to accept image MIME types
 - Show appropriate label in wizard: "Invoice image uploaded"
+- **Status:** Done
 
 ### T043 — Vision AI extraction for image invoices
 - When `pdf_type == "image"` (detected by `pdf_extractor.detect_pdf_type`), skip text extraction
