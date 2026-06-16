@@ -17,7 +17,11 @@ doctype_js = {
 app_include_js = ["/assets/fatura_ai/js/import_wizard.js"]
 
 # Scheduled jobs (none for v1)
-scheduler_events = {}
+scheduler_events = {
+    "all": [
+        "fatura_ai.helpers.email_monitor.check_inbox_for_invoices",
+    ],
+}
 
 # DocType events (none for v1 — no auto-submit ever)
 doc_events = {}
