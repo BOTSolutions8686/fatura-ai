@@ -25,6 +25,7 @@
 - Provider priority: Gemini Vision (gemini-1.5-flash has vision) → GPT-4V → Anthropic Claude Vision
 - Prompt: same structured extraction prompt as text, but passed as image message content
 - Return same `extracted_json` schema so the rest of the pipeline is unchanged
+- **Status:** Done
 
 ### T044 — Tesseract OCR fallback
 - If vision AI is not configured or fails, run Tesseract OCR on the image pages
@@ -91,3 +92,4 @@
 - [T030] Duplicate invoice detection + force-create UI in confirm_import | aider | P1 | DONE | T011
 - [T034] Sanity warnings after confirm_import (non-blocking) | aider | P2 | DONE | T030
 - [T042] Accept image file uploads in wizard (JPG/PNG/WEBP) | aider | P0 | DONE | none
+- [T043] Vision AI extraction for image invoices | aider | P0 | DONE | T042

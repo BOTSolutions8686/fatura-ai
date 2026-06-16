@@ -3,10 +3,14 @@ AI extraction orchestrator — provider selection, auto-routing, and retry.
 Auto-routes: native PDF → DeepSeek (cheap), image/scanned → Gemini Flash.
 تنسيق استخراج البيانات بالذكاء الاصطناعي — اختيار المزود والتوجيه التلقائي
 """
+import os
 import time
+import tempfile
 import frappe
 from frappe import _
 from typing import Dict, Any
+
+from pdf2image import convert_from_path
 
 from fatura_ai.api.providers.base_provider import BaseProvider
 from fatura_ai.api.providers.deepseek_provider import DeepSeekProvider
@@ -101,34 +105,66 @@ def extract_invoice_data(file_url: str) -> Dict[str, Any]:
 
     if local_path:
         pdf_type = detect_pdf_type(local_path)
-        if pdf_type == "image" and not isinstance(provider, GoogleProvider):
-            ocr_text = extract_text_with_ocr(local_path)
-            if ocr_text:
-                frappe.logger().info(
-                    "Fatura AI T044: OCR extracted %d chars", len(ocr_text)
-                )
-                # Create a temporary File doc with the OCR text so the provider
-                # can read it as a normal text file.
-                import frappe
-                from frappe.utils import now_datetime
-
-                file_name = f"ocr_{frappe.generate_hash(length=8)}.txt"
-                ocr_file = frappe.get_doc(
-                    {
-                        "doctype": "File",
-                        "file_name": file_name,
-                        "content": ocr_text,
-                        "is_private": 1,
-                    }
-                )
-                ocr_file.insert(ignore_permissions=True)
-                file_url = ocr_file.file_url
+        if pdf_type == "image":
+            if isinstance(provider, GoogleProvider):
+                # T043 — Vision AI extraction for image PDFs
+                images = convert_from_path(local_path, dpi=200)
+                image_paths = []
+                for i, img in enumerate(images):
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                    img.save(tmp.name, "JPEG")
+                    image_paths.append(tmp.name)
+                try:
+                    result = provider.extract_invoice_from_image(image_paths)
+                    result["provider"] = type(provider).__name__
+                    # T045 — image quality check
+                    quality_info = check_image_quality(local_path)
+                    if quality_info:
+                        result["pdf_quality"] = quality_info
+                        if quality_info.get("quality") == "low":
+                            warnings = result.setdefault("warnings", [])
+                            warnings.append(
+                                quality_info.get(
+                                    "warning",
+                                    _("Image resolution may be too low for accurate extraction."),
+                                )
+                            )
+                    return result
+                finally:
+                    for p in image_paths:
+                        try:
+                            os.unlink(p)
+                        except OSError:
+                            pass
             else:
-                frappe.logger().warning(
-                    "Fatura AI T044: OCR returned empty text"
-                )
+                # T044 — Tesseract OCR fallback for non‑Google providers
+                ocr_text = extract_text_with_ocr(local_path)
+                if ocr_text:
+                    frappe.logger().info(
+                        "Fatura AI T044: OCR extracted %d chars", len(ocr_text)
+                    )
+                    # Create a temporary File doc with the OCR text so the provider
+                    # can read it as a normal text file.
+                    import frappe
+                    from frappe.utils import now_datetime
 
-        # T045 — image quality check
+                    file_name = f"ocr_{frappe.generate_hash(length=8)}.txt"
+                    ocr_file = frappe.get_doc(
+                        {
+                            "doctype": "File",
+                            "file_name": file_name,
+                            "content": ocr_text,
+                            "is_private": 1,
+                        }
+                    )
+                    ocr_file.insert(ignore_permissions=True)
+                    file_url = ocr_file.file_url
+                else:
+                    frappe.logger().warning(
+                        "Fatura AI T044: OCR returned empty text"
+                    )
+
+        # T045 — image quality check (for non‑image PDFs this is skipped)
         quality_info = None
         if pdf_type == "image":
             quality_info = check_image_quality(local_path)

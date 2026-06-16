@@ -1,8 +1,9 @@
 """Google Gemini Flash provider — tertiary provider, lowest cost."""
+import base64
 import json
 import frappe
 from frappe import _
-from typing import Dict, Any
+from typing import Dict, Any, List
 import google.generativeai as genai
 from fatura_ai.api.providers.base_provider import BaseProvider
 
@@ -14,10 +15,8 @@ class GoogleProvider(BaseProvider):
         self.model = model
         genai.configure(api_key=api_key)
 
-    def extract_invoice(self, file_url: str) -> Dict[str, Any]:
-        file_bytes, mime_type = self._load_file_bytes(file_url)
-        model = genai.GenerativeModel(self.model)
-        prompt = (
+    def _build_extraction_prompt(self) -> str:
+        return (
             "You are an invoice data extraction assistant. "
             "Extract the following fields from the invoice image/PDF below and return them "
             "as a JSON object with these keys:\n"
@@ -26,12 +25,35 @@ class GoogleProvider(BaseProvider):
             "subtotal, vat_amount, total.\n\n"
             "Return ONLY valid JSON, no extra text."
         )
+
+    def extract_invoice(self, file_url: str) -> Dict[str, Any]:
+        file_bytes, mime_type = self._load_file_bytes(file_url)
+        model = genai.GenerativeModel(self.model)
+        prompt = self._build_extraction_prompt()
         response = model.generate_content(
             [
                 {"mime_type": mime_type, "data": file_bytes},
                 prompt,
             ]
         )
+        return self._parse_json_response(response.text)
+
+    def extract_invoice_from_image(self, image_paths: List[str]) -> Dict[str, Any]:
+        """Send one or more image files to Gemini Vision and return parsed JSON."""
+        model = genai.GenerativeModel(self.model)
+        prompt = self._build_extraction_prompt()
+        parts = [{"text": prompt}]
+        for path in image_paths:
+            with open(path, "rb") as f:
+                img_bytes = f.read()
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            parts.append({
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": b64,
+                }
+            })
+        response = model.generate_content({"parts": parts})
         return self._parse_json_response(response.text)
 
     # ------------------------------------------------------------------
