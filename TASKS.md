@@ -95,3 +95,4 @@
 - [T043] Vision AI extraction for image invoices | aider | P0 | DONE | T042
 - [T044] Tesseract OCR fallback for image invoices | aider | P0 | DONE | T042
 - [T045] Image quality warning (DPI check) | aider | P1 | DONE | T042
+- [T046] Batch import (multiple invoices) | aider | P1 | DONE | T042
