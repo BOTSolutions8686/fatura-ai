@@ -18,11 +18,20 @@ window.FaturaWizard = class FaturaWizard {
 		this.file_url = null;
 		this._force_import = false;
 		this._auto_create_items = true;
+		this.batch_mode = false;
+		this.batch_logs = [];
+		this._batch_files = [];
 	}
 
 	// ── Entry point ──────────────────────────────────────────────────────────
 
-	open() {
+	open(log_name) {
+		if (log_name) {
+			// Resume existing log
+			this.log_name = log_name;
+			this._resume_log(log_name);
+			return;
+		}
 		this.dialog = new frappe.ui.Dialog({
 			title: __("Import Invoice — فاتورة AI"),
 			size: "large",
@@ -63,7 +72,12 @@ window.FaturaWizard = class FaturaWizard {
 	// ── Step 0: Upload ───────────────────────────────────────────────────────
 
 	_render_upload() {
-		this.dialog.set_primary_action(__("Upload & Extract"), () => this._do_upload());
+		const actionLabel = this.batch_mode ? __("Upload All") : __("Upload & Extract");
+		this.dialog.set_primary_action(actionLabel, () => this._do_upload());
+		const multipleAttr = this.batch_mode ? 'multiple' : '';
+		const hint = this.batch_mode
+			? __("Select multiple invoice files (PDF / Image)")
+			: __("Choose Invoice (PDF / Image)");
 		this._set_content(`
 			<div class="fatura-upload-area"
 				style="padding:32px; text-align:center; border:2px dashed #d1d5db;
@@ -72,7 +86,7 @@ window.FaturaWizard = class FaturaWizard {
 					${__("No file selected")}
 				</p>
 				<button class="btn btn-default btn-sm fatura-browse-btn">
-					📎 ${__("Choose Invoice (PDF / Image)")}
+					📎 ${hint}
 				</button>
 			</div>
 		`);
@@ -86,26 +100,67 @@ window.FaturaWizard = class FaturaWizard {
 						doctype: null,
 						docname: null,
 						folder: "Home/Attachments",
-						allow_multiple: false,
+						allow_multiple: this.batch_mode,
 						on_success: (file_doc) => {
-							this.file_url = file_doc.file_url;
-							const name = file_doc.file_name || file_doc.file_url;
-							// Determine file type from extension
-							const ext = (file_doc.file_url || "").split(".").pop().toLowerCase();
-							const isImage = ["png","jpg","jpeg","webp","tiff","tif"].includes(ext);
-							const label = isImage
-								? __("Invoice image uploaded")
-								: __("Invoice PDF uploaded");
-							this.dialog.fields_dict.step_content.$wrapper
-								.find(".fatura-file-name")
-								.html(`✅ <strong>${name}</strong><br><span style="font-size:11px;color:#6b7280;">${label}</span>`);
+							if (this.batch_mode) {
+								// Collect multiple files
+								if (!this._batch_files) this._batch_files = [];
+								this._batch_files.push(file_doc);
+								const count = this._batch_files.length;
+								this.dialog.fields_dict.step_content.$wrapper
+									.find(".fatura-file-name")
+									.html(`✅ <strong>${count} ${__("file(s) selected")}</strong>`);
+							} else {
+								this.file_url = file_doc.file_url;
+								const name = file_doc.file_name || file_doc.file_url;
+								const ext = (file_doc.file_url || "").split(".").pop().toLowerCase();
+								const isImage = ["png","jpg","jpeg","webp","tiff","tif"].includes(ext);
+								const label = isImage
+									? __("Invoice image uploaded")
+									: __("Invoice PDF uploaded");
+								this.dialog.fields_dict.step_content.$wrapper
+									.find(".fatura-file-name")
+									.html(`✅ <strong>${name}</strong><br><span style="font-size:11px;color:#6b7280;">${label}</span>`);
+							}
 						},
 					});
+				});
+			// Toggle batch mode button
+			this.dialog.fields_dict.step_html.$wrapper
+				.find(".fatura-toggle-batch")
+				.on("click", () => {
+					this.batch_mode = !this.batch_mode;
+					this._batch_files = [];
+					this._go_to(0);
 				});
 		}, 50);
 	}
 
 	_do_upload() {
+		if (this.batch_mode) {
+			const files = this._batch_files || [];
+			if (files.length === 0) {
+				frappe.msgprint(__("Please select at least one file"));
+				return;
+			}
+			this._set_content(`<div style="padding:24px;text-align:center;color:#6b7280;">⏳ ${__("Uploading {0} files…", [files.length])}</div>`);
+			const fileUrls = files.map(f => f.file_url);
+			frappe.call({
+				method: "fatura_ai.api.import_wizard.batch_upload_invoice",
+				args: {
+					file_urls: fileUrls,
+					source_doctype: this.frm.doctype,
+					source_docname: this.frm.docname,
+				},
+				callback: (r) => {
+					if (r.message && r.message.log_names) {
+						this.batch_logs = r.message.log_names;
+						this._do_batch_extraction();
+					}
+				},
+			});
+			return;
+		}
 		if (!this.file_url) {
 			frappe.msgprint(__("Please attach an invoice file first"));
 			return;
@@ -125,6 +180,116 @@ window.FaturaWizard = class FaturaWizard {
 				}
 			},
 		});
+	}
+
+	_do_batch_extraction() {
+		this._set_content(`<div style="padding:24px;text-align:center;color:#6b7280;">⏳ ${__("Extracting {0} invoices…", [this.batch_logs.length])}</div>`);
+		frappe.call({
+			method: "fatura_ai.api.import_wizard.batch_run_ai_extraction",
+			args: { log_names: this.batch_logs },
+			callback: (r) => {
+				if (r.message) {
+					this._render_batch_list(r.message);
+				}
+			},
+		});
+	}
+
+	_render_batch_list(results) {
+		const rows = results.map((res, idx) => {
+			const statusIcon = res.status === "ok" ? "✅" : "❌";
+			const statusText = res.status === "ok" ? __("Extracted") : __("Failed");
+			const logName = res.log_name;
+			const supplier = res.log ? (res.log.matched_supplier || "—") : "—";
+			const pi = res.log ? (res.log.linked_pi || "—") : "—";
+			const reviewBtn = res.status === "ok"
+				? `<button class="btn btn-default btn-xs fatura-review-log" data-log="${logName}">${__("Review")}</button>`
+				: `<button class="btn btn-default btn-xs fatura-retry-log" data-log="${logName}">${__("Retry")}</button>`;
+			return `<tr style="border-bottom:1px solid #e5e7eb;">
+				<td style="padding:8px 4px;font-size:12px;">${idx + 1}</td>
+				<td style="padding:8px 4px;font-size:12px;">${logName}</td>
+				<td style="padding:8px 4px;font-size:12px;">${statusIcon} ${statusText}</td>
+				<td style="padding:8px 4px;font-size:12px;">${supplier}</td>
+				<td style="padding:8px 4px;font-size:12px;">${pi}</td>
+				<td style="padding:8px 4px;">${reviewBtn}</td>
+			</tr>`;
+		}).join("");
+		this._set_content(`
+			<div style="padding:16px;">
+				<p style="font-weight:600;font-size:14px;margin-bottom:12px;">${__("Batch Import Results")}</p>
+				<table style="width:100%;border-collapse:collapse;font-size:12px;">
+					<thead><tr style="background:#f9fafb;">
+						<th style="padding:8px 4px;text-align:left;">#</th>
+						<th style="padding:8px 4px;text-align:left;">${__("Log")}</th>
+						<th style="padding:8px 4px;text-align:left;">${__("Status")}</th>
+						<th style="padding:8px 4px;text-align:left;">${__("Supplier")}</th>
+						<th style="padding:8px 4px;text-align:left;">${__("PI")}</th>
+						<th style="padding:8px 4px;"></th>
+					</tr></thead>
+					<tbody>${rows}</tbody>
+				</table>
+			</div>
+		`);
+		setTimeout(() => {
+			const $w = this.dialog.fields_dict.step_content.$wrapper;
+			$w.find(".fatura-review-log").on("click", (e) => {
+				const logName = $(e.target).data("log");
+				this.dialog.hide();
+				new FaturaWizard(this.frm).open(logName);
+			});
+			$w.find(".fatura-retry-log").on("click", (e) => {
+				const logName = $(e.target).data("log");
+				this._set_content(`<div style="padding:24px;text-align:center;color:#6b7280;">⏳ ${__("Retrying extraction…")}</div>`);
+				frappe.call({
+					method: "fatura_ai.api.import_wizard.run_ai_extraction",
+					args: { log_name: logName },
+					callback: (r) => {
+						if (r.message) {
+							this._do_batch_extraction();
+						}
+					},
+				});
+			});
+		}, 50);
+	}
+
+	_resume_log(log_name) {
+		frappe.call({
+			method: "fatura_ai.api.import_wizard.get_review_summary",  // returns log + extracted
+			args: { log_name: log_name },
+			callback: (r) => {
+				if (!r.message) return;
+				const summary = r.message;
+				this.log_name = log_name;
+				this.extracted = summary.log;
+				this.file_url = summary.log.file_url;
+				this.confirmed_supplier = summary.log.matched_supplier;
+				this.confirmed_items = (summary.extracted && summary.extracted.confirmed_items) || [];
+				const status = summary.log.status;
+				let step = 0;
+				if (status === "Extracted" || status === "Confirmed" || status === "Imported") {
+					step = 2; // supplier step (or later)
+				} else if (status === "Draft") {
+					step = 1; // extraction step
+				}
+				this.dialog = new frappe.ui.Dialog({
+					title: __("Import Invoice — فاتورة AI"),
+					size: "large",
+					fields: [
+						{ fieldtype: "HTML", fieldname: "step_html", options: this._step_html(step) },
+						{ fieldtype: "HTML", fieldname: "step_content", options: "" },
+					],
+					primary_action_label: __("Continue"),
+					primary_action: () => this._do_continue(),
+				});
+				this.dialog.show();
+				this._render_step(step);
+			},
+		});
+	}
+
+	_do_continue() {
+		this._go_to(this.current_step);
 	}
 
 	// ── Step 1: AI Extraction ────────────────────────────────────────────────
@@ -836,6 +1001,9 @@ window.FaturaWizard = class FaturaWizard {
 				: "";
 			return `<div style="display:flex;flex-direction:column;align-items:center;">${circle}${lbl}</div>${connector}`;
 		}).join("");
-		return `<div style="display:flex;align-items:center;padding:10px 4px 14px;gap:2px;">${parts}</div>`;
+		const batchBtn = this.batch_mode
+			? `<button class="btn btn-default btn-xs fatura-toggle-batch" style="margin-left:auto;font-size:10px;">${__("Single Import")}</button>`
+			: `<button class="btn btn-default btn-xs fatura-toggle-batch" style="margin-left:auto;font-size:10px;">${__("Batch Import")}</button>`;
+		return `<div style="display:flex;align-items:center;padding:10px 4px 14px;gap:2px;">${parts}${batchBtn}</div>`;
 	}
 };

@@ -39,6 +39,44 @@ def upload_invoice(file_url, source_doctype, source_docname):
     return {"log_name": log.name, "status": "ok", "file_type": file_type}
 
 
+@frappe.whitelist()
+def batch_upload_invoice(file_urls, source_doctype, source_docname):
+    """Validate and create Draft logs for multiple files."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
+    _assert_doctype(source_doctype)
+    from fatura_ai.api.extractor import validate_file
+    log_names = []
+    for file_url in file_urls:
+        validate_file(file_url)
+        real_docname = source_docname if source_docname and not source_docname.startswith("new-") else None
+        log = frappe.get_doc({
+            "doctype": "Fatura Import Log",
+            "status": "Draft",
+            "source_doctype": source_doctype,
+            "source_docname": real_docname,
+            "file_url": file_url,
+        })
+        log.flags.ignore_links = True
+        log.insert(ignore_permissions=True)
+        log_names.append(log.name)
+    frappe.db.commit()
+    return {"log_names": log_names, "status": "ok"}
+
+
+@frappe.whitelist()
+def batch_run_ai_extraction(log_names):
+    """Run AI extraction for each log, return list of results."""
+    frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
+    results = []
+    for log_name in log_names:
+        try:
+            result = run_ai_extraction(log_name)
+            results.append({"log_name": log_name, "status": "ok", "log": result})
+        except Exception as e:
+            results.append({"log_name": log_name, "status": "failed", "error": str(e)})
+    return results
+
+
 # ── Step 1: AI Extraction ───────────────────────────────────────────────────
 
 @frappe.whitelist()

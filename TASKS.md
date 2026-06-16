@@ -45,6 +45,7 @@
 - Process each in sequence, show a progress list: filename | status | supplier | PI number
 - Failed ones can be retried individually
 - This is a new wizard mode: "Batch Import" vs "Single Import"
+- **Status:** Done
 
 ### T047 — Email-triggered import (bonus)
 - Monitor a designated email inbox (configurable in Fatura AI Settings)
