@@ -1,6 +1,5 @@
 # Fatura AI — Task Backlog
-<!-- Orchestrated by Cowork. Last updated: 2026-06-16 07:30 -->
-<!-- Format: [ID] Title | Agent | Priority | Status | Dependencies -->
+<!-- Orchestrated by Cowork. Last updated: 2026-06-16 09:12] Title | Agent | Priority | Status | Dependencies -->
 
 ## 🔄 In Progress
 <!-- none -->
@@ -93,3 +92,5 @@
 - [T034] Sanity warnings after confirm_import (non-blocking) | aider | P2 | DONE | T030
 - [T042] Accept image file uploads in wizard (JPG/PNG/WEBP) | aider | P0 | DONE | none
 - [T043] Vision AI extraction for image invoices | aider | P0 | DONE | T042
+- [T044] Tesseract OCR fallback for image invoices | aider | P0 | DONE | T042
+- [T045] Image quality warning (DPI check) | aider | P1 | DONE | T042
