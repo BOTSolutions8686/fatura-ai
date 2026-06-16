@@ -3,6 +3,7 @@ PDF type detection — determines whether a PDF has a text layer or is image-onl
 """
 import frappe
 from typing import Literal
+from pdf2image import convert_from_path
 
 
 def detect_pdf_type(file_path: str) -> Literal["text", "image"]:
@@ -29,13 +30,50 @@ def extract_text_with_ocr(file_path: str) -> str:
     Returns joined text from all pages, or empty string on failure.
     """
     try:
-        from pdf2image import convert_from_path
         import pytesseract
     except ImportError:
         frappe.logger().warning(
-            "Fatura AI T044: pdf2image or pytesseract not installed; OCR unavailable"
+            "Fatura AI T044: pytesseract not installed; OCR unavailable"
         )
         return ""
+
+
+
+
+def check_image_quality(file_path: str) -> dict:
+    """
+    Check the DPI of the first page of a PDF and return a quality assessment.
+
+    Returns a dict with:
+        - dpi (int): the horizontal DPI of the first page
+        - quality (str): 'low' (<150), 'ok' (150-299), 'high' (>=300)
+        - warning (str or None): a human‑readable warning if quality is low
+    """
+    try:
+        images = convert_from_path(file_path, dpi=72)
+        if not images:
+            return {"dpi": 0, "quality": "low", "warning": frappe._("Could not read any page from the PDF.")}
+        first_page = images[0]
+        dpi = first_page.info.get("dpi", (72, 72))[0]
+        dpi = int(dpi)
+        if dpi < 150:
+            quality = "low"
+            warning = frappe._(
+                "Image resolution is too low ({0} DPI). "
+                "Extraction accuracy may be reduced."
+            ).format(dpi)
+        elif dpi < 300:
+            quality = "ok"
+            warning = None
+        else:
+            quality = "high"
+            warning = None
+        return {"dpi": dpi, "quality": quality, "warning": warning}
+    except Exception as exc:
+        frappe.logger().warning(
+            "Fatura AI T045: image quality check failed: %s", str(exc)
+        )
+        return {"dpi": 0, "quality": "low", "warning": frappe._("Could not determine image resolution.")}
 
     try:
         images = convert_from_path(file_path, dpi=200)

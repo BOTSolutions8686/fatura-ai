@@ -11,7 +11,7 @@ from typing import Dict, Any
 from fatura_ai.api.providers.base_provider import BaseProvider
 from fatura_ai.api.providers.deepseek_provider import DeepSeekProvider
 from fatura_ai.api.providers.google_provider import GoogleProvider
-from fatura_ai.helpers.pdf_extractor import detect_pdf_type, extract_text_with_ocr
+from fatura_ai.helpers.pdf_extractor import detect_pdf_type, extract_text_with_ocr, check_image_quality
 
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif"}
@@ -128,10 +128,26 @@ def extract_invoice_data(file_url: str) -> Dict[str, Any]:
                     "Fatura AI T044: OCR returned empty text"
                 )
 
+        # T045 — image quality check
+        quality_info = None
+        if pdf_type == "image":
+            quality_info = check_image_quality(local_path)
+
     for attempt in range(_MAX_ATTEMPTS):
         try:
             result = provider.extract_invoice(file_url)
             result["provider"] = type(provider).__name__
+            # T045 — attach quality info to result
+            if quality_info:
+                result["pdf_quality"] = quality_info
+                if quality_info.get("quality") == "low":
+                    warnings = result.setdefault("warnings", [])
+                    warnings.append(
+                        quality_info.get(
+                            "warning",
+                            _("Image resolution may be too low for accurate extraction."),
+                        )
+                    )
             return result
         except Exception as exc:
             if not _is_retriable(exc):

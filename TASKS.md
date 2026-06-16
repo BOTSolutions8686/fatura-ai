@@ -38,6 +38,7 @@
 - Before attempting OCR/vision extraction on a scanned image, check resolution
 - If DPI < 150: show warning in wizard "Image resolution may be too low for accurate extraction. Results may be incomplete."
 - Log `pdf_quality: "low"/"ok"/"high"` in extracted_json
+- **Status:** Done
 
 ### T046 — Batch import (multiple invoices)
 - Allow uploading multiple PDFs at once (file input with `multiple` attribute)
