@@ -80,21 +80,27 @@ def batch_run_ai_extraction(log_names):
 # ── Step 1: AI Extraction ───────────────────────────────────────────────────
 
 @frappe.whitelist()
-def run_ai_extraction(log_name):
-    """Fetch log, run AI extraction, update log fields, return log as dict."""
+def run_ai_extraction(log_name, file_path=None):
+    """Fetch log, run AI extraction, update log fields, return log as dict.
+
+    If *file_path* is provided, it is used directly instead of resolving
+    the file through the File doctype.  This is used by the email monitor
+    which saves attachments to temporary files.
+    """
     frappe.has_permission("Fatura Import Log", ptype="write", throw=True)
     log = frappe.get_doc("Fatura Import Log", log_name)
 
-    # Get attached file path
-    file_doc = frappe.get_doc("File", {"file_url": log.file_url})
-    file_path = file_doc.get_full_path()
+    # Resolve the file path
+    if file_path is None:
+        file_doc = frappe.get_doc("File", {"file_url": log.file_url})
+        file_path = file_doc.get_full_path()
 
     log.status = "Draft"
     log.save(ignore_permissions=True)
     frappe.db.commit()
 
     # Detect file type (image or PDF)
-    file_type = _detect_file_type(log.file_url)
+    file_type = _detect_file_type(file_path)
     is_image = file_type == "image"
 
     # If image, convert to single-page PDF before extraction
@@ -140,7 +146,7 @@ def run_ai_extraction(log_name):
     # Set pdf_type for image files
     if is_image:
         result["pdf_type"] = "image"
-    elif log.file_url and log.file_url.lower().endswith(".pdf"):
+    elif file_path and file_path.lower().endswith(".pdf"):
         try:
             from fatura_ai.helpers.pdf_extractor import detect_pdf_type
             result["pdf_type"] = detect_pdf_type(file_path)
