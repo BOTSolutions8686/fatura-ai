@@ -11,6 +11,7 @@ from typing import Dict, Any
 from fatura_ai.api.providers.base_provider import BaseProvider
 from fatura_ai.api.providers.deepseek_provider import DeepSeekProvider
 from fatura_ai.api.providers.google_provider import GoogleProvider
+from fatura_ai.helpers.pdf_extractor import detect_pdf_type, extract_text_with_ocr
 
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif"}
@@ -90,6 +91,43 @@ def extract_invoice_data(file_url: str) -> Dict[str, Any]:
     provider = get_active_provider(file_url=file_url)
     last_error = None
 
+    # T044 — Tesseract OCR fallback for image PDFs
+    local_path = None
+    try:
+        file_doc = frappe.get_doc("File", {"file_url": file_url})
+        local_path = file_doc.get_full_path()
+    except Exception:
+        pass
+
+    if local_path:
+        pdf_type = detect_pdf_type(local_path)
+        if pdf_type == "image" and not isinstance(provider, GoogleProvider):
+            ocr_text = extract_text_with_ocr(local_path)
+            if ocr_text:
+                frappe.logger().info(
+                    "Fatura AI T044: OCR extracted %d chars", len(ocr_text)
+                )
+                # Create a temporary File doc with the OCR text so the provider
+                # can read it as a normal text file.
+                import frappe
+                from frappe.utils import now_datetime
+
+                file_name = f"ocr_{frappe.generate_hash(length=8)}.txt"
+                ocr_file = frappe.get_doc(
+                    {
+                        "doctype": "File",
+                        "file_name": file_name,
+                        "content": ocr_text,
+                        "is_private": 1,
+                    }
+                )
+                ocr_file.insert(ignore_permissions=True)
+                file_url = ocr_file.file_url
+            else:
+                frappe.logger().warning(
+                    "Fatura AI T044: OCR returned empty text"
+                )
+
     for attempt in range(_MAX_ATTEMPTS):
         try:
             result = provider.extract_invoice(file_url)
@@ -109,6 +147,8 @@ def extract_invoice_data(file_url: str) -> Dict[str, Any]:
                 time.sleep(2 ** (attempt + 1))  # 2s, 4s
 
     frappe.throw(
-        _("AI extraction timed out after {0} attempts. Please try again.").format(_MAX_ATTEMPTS),
+        _("AI extraction timed out after {0} attempts. Please try again.").format(
+            _MAX_ATTEMPTS
+        ),
         frappe.ValidationError,
     )

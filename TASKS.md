@@ -32,6 +32,7 @@
 - Use `pytesseract.image_to_string(image, lang='ara+eng')`
 - Pass OCR text to existing text-based AI extraction prompt
 - This is lower accuracy than vision AI but works without an API key
+- **Status:** Done
 
 ### T045 — Image quality warning
 - Before attempting OCR/vision extraction on a scanned image, check resolution
