@@ -12,6 +12,8 @@ import frappe
 
 from fatura_ai.api.providers.base_provider import BaseProvider
 
+_ = frappe._
+
 
 class DeepSeekProvider(BaseProvider):
     """Extract invoice data from native PDFs via DeepSeek Chat."""
