@@ -376,6 +376,29 @@ window.FaturaWizard = class FaturaWizard {
 		</div>`;
 	}
 
+	_template_banner() {
+		const extracted = JSON.parse(this.extracted?.extracted_json || "{}") || {};
+		const match = extracted.template_match;
+		if (!match) return "";
+		const samples = extracted.template_samples || 0;
+		if (match === "exact") {
+			return `<div style="background:#f0fdf4; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#166534;">
+				📄 ${__("Known invoice layout")}${samples > 1 ? ` — ${samples} ${__("previous imports")}` : ""}
+			</div>`;
+		}
+		if (match === "similar") {
+			return `<div style="background:#fef3c7; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#92400e;">
+				🔄 ${__("Similar invoice layout detected")}${samples > 0 ? ` (${samples} ${__("previous imports")})` : ""} — ${__("template may have changed")}
+			</div>`;
+		}
+		if (match === "new") {
+			return `<div style="background:#eff6ff; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#1e40af;">
+				🆕 ${__("New invoice layout — learning template")}
+			</div>`;
+		}
+		return "";
+	}
+
 	_show_supplier_match(match) {
 		this.confirmed_supplier = match.supplier || "";
 		this._supplier_match = match;
@@ -400,6 +423,7 @@ window.FaturaWizard = class FaturaWizard {
 		this._set_content(`
 			<div style="padding:16px;">
 				${this._pdf_type_banner()}
+				${this._template_banner()}
 				<p style="font-size:13px; color:#6b7280; margin-bottom:16px;">
 					${__("AI extracted vendor")}:
 					<strong>${(this.extracted || {}).vendor_name || "—"}</strong>
@@ -484,6 +508,7 @@ window.FaturaWizard = class FaturaWizard {
 		this._set_content(`
 			<div style="padding:16px;">
 				${this._pdf_type_banner()}
+				${this._template_banner()}
 				<div style="background:#fef3c7; border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px; color:#92400e;">
 					⚠️ <strong>${__("Supplier not found in ERPNext")}</strong>
 				</div>

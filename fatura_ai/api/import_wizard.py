@@ -132,10 +132,22 @@ def run_ai_extraction(log_name, file_path=None):
     # ── Step 0: Scan ZATCA QR code FIRST (ground truth) ──────────────────
     qr_result = _scan_qr_first(file_path, log.file_url)
 
+    # ── Step 0.5: Check supplier template match ──────────────────────────
+    template_info = _check_template(file_path, qr_result)
+    if template_info:
+        result = template_info
+        result["qr_data_found"] = False
+        frappe.logger().info("Fatura AI: template match — %s", template_info.get("template"))
+
     # ── Step 1: AI extraction ──────────────────────────────────────────
     try:
         from fatura_ai.helpers.ai_extraction import extract_invoice_data
-        result = extract_invoice_data(extraction_url)
+        ai_result = extract_invoice_data(extraction_url)
+        if template_info:
+            template_info.update(ai_result)
+            result = template_info
+        else:
+            result = ai_result
     except Exception as e:
         if qr_result:
             # QR data available → partial success, continue with QR fields
@@ -654,6 +666,35 @@ def _scan_qr_first(file_path: str, file_url: str) -> dict:
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Fatura AI ZATCA QR")
     return None
+
+
+def _check_template(file_path, qr_result):
+    supplier = (qr_result or {}).get("seller_name")
+    if not supplier or not file_path:
+        return None
+    try:
+        from fatura_ai.helpers.layout_hasher import compute_layout_hash
+        from fatura_ai.fatura_ai.doctype.supplier_invoice_template.supplier_invoice_template import SupplierInvoiceTemplate
+
+        layout_hash = compute_layout_hash(file_path)
+        if not layout_hash:
+            return None
+
+        match = SupplierInvoiceTemplate.find_template(supplier, layout_hash)
+        if match:
+            return {"template_match": "exact", "template_hash": layout_hash,
+                    "template_samples": 0}
+
+        similar = SupplierInvoiceTemplate.find_similar(supplier, layout_hash)
+        if similar:
+            return {"template_match": "similar", "template_hash": layout_hash,
+                    "template_samples": similar.samples_count or 0,
+                    "previous_hash": similar.layout_hash}
+
+        return {"template_match": "new", "template_hash": layout_hash,
+                "template_samples": 0}
+    except Exception:
+        return None
 
 
 def _merge_qr_data(result: dict, file_path: str, file_url: str) -> dict:

@@ -25,3 +25,8 @@ trusted,موثوق
 No items,لا توجد أصناف
 will be auto-created,سيتم إنشاؤه تلقائياً
 will be skipped,سيتم تخطيه
+Known invoice layout,تخطيط فاتورة معروف
+previous imports,استيراد سابق
+Similar invoice layout detected,تم اكتشاف تخطيط فاتورة مشابه
+template may have changed,قد يكون القالب قد تغير
+New invoice layout — learning template,تخطيط فاتورة جديد — جاري تعلم القالب
