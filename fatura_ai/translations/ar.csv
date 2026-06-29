@@ -17,3 +17,11 @@ Unknown AI provider: {0},مزود الذكاء غير معروف: {0}
 Anthropic extraction not yet implemented,استخراج Anthropic غير مطبق بعد
 OpenAI extraction not yet implemented,استخراج OpenAI غير مطبق بعد
 Google extraction not yet implemented,استخراج Google غير مطبق بعد
+items matched,صنف مطابق
+partial,جزئي
+unmatched,غير مطابق
+learned,متعلم
+trusted,موثوق
+No items,لا توجد أصناف
+will be auto-created,سيتم إنشاؤه تلقائياً
+will be skipped,سيتم تخطيه

@@ -625,6 +625,7 @@ window.FaturaWizard = class FaturaWizard {
 			<span style="color:${legendColor};font-weight:500;">${legendIcon} ${matchedCount}/${totalCount} ${__("items matched")}</span>
 			${partialCount > 0 ? ` &nbsp;·&nbsp; <span style="color:#ca8a04;">${partialCount} ${__("partial")}</span>` : ""}
 			${unmatchedCount > 0 ? ` &nbsp;·&nbsp; <span style="color:#dc2626;">${unmatchedCount} ${__("unmatched")}</span>` : ""}
+			${s.learned > 0 ? ` &nbsp;·&nbsp; <span style="color:#7c3aed;" title="${__("Previously confirmed and learned")}">🧠 ${s.learned} ${__("learned")}${s.trusted > 0 ? ` (${s.trusted} ${__("trusted")})` : ""}</span>` : ""}
 		</div>`;
 		const autoCreateChecked = this._auto_create_items ? "checked" : "";
 		const autoCreateHtml = `<div style="margin-bottom:10px;font-size:13px;color:#374151;">
@@ -680,8 +681,12 @@ window.FaturaWizard = class FaturaWizard {
 		const rowBg = isMatched ? (isHighConf ? "" : "background:#FFFBEB;") : "background:#FEF2F2;";
 		const badgeColor = isHighConf ? "#16a34a" : isMediumConf ? "#ca8a04" : isLowConf ? "#dc2626" : "#9ca3af";
 		const badgeIcon = isHighConf ? "✅" : isMediumConf ? "⚠️" : isLowConf ? "❌" : "—";
-		const badgeText = method ? `${badgeIcon} ${method}` : badgeIcon;
-		const tip = method ? `title="${frappe.utils.escape_html(method + (conf ? ` (${conf}%)` : ''))}"` : "";
+		const timesUsed = item.times_used || 0;
+		const isTrusted = method === "Learned" && timesUsed >= 5;
+		const badgeText = method
+			? `${badgeIcon} ${isTrusted ? "⭐ " : ""}${method}${timesUsed > 1 ? ` (${timesUsed}x)` : ""}`
+			: badgeIcon;
+		const tip = method ? `title="${frappe.utils.escape_html(method + (conf ? ` (${conf}%)` : '') + (timesUsed > 0 ? ` · ${timesUsed}x used` : ''))}"` : "";
 		const codeStyle = isMatched ? "border-color:#34A853;background:#f0fdf4;" : "border-color:#dc2626;background:#fef2f2;";
 		const qty = parseFloat(item.qty || 1);
 		const rate = parseFloat(item.rate || item.unit_price || 0);

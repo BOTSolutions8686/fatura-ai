@@ -312,6 +312,8 @@ def match_items(log_name, line_items_json=None):
 
     total = len(items)
     matched_count = sum(1 for i in matched if i.get("matched_item"))
+    learned_count = sum(1 for i in matched if i.get("method") == "Learned")
+    trusted_count = sum(1 for i in matched if i.get("method") == "Learned" and i.get("times_used", 0) >= 5)
     partial_count = sum(
         1 for i in matched if i.get("confidence", 0) < 1.0 and i.get("matched_item")
     )
@@ -327,6 +329,8 @@ def match_items(log_name, line_items_json=None):
         "summary": {
             "total": total,
             "matched": matched_count,
+            "learned": learned_count,
+            "trusted": trusted_count,
             "partial": partial_count,
             "unmatched": unmatched_count,
         },

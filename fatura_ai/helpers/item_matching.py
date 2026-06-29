@@ -50,10 +50,14 @@ def _match_by_learned_mapping(text: str, supplier: Optional[str]) -> Optional[Di
     mapping = InvoiceAIItemMap.find_mapping(text, supplier)
     if not mapping:
         return None
-    # Validate the mapped item still exists — it may have been deleted
     if not frappe.db.exists("Item", mapping.matched_item):
         return None
-    return {"matched_item": mapping.matched_item, "method": "Learned", "confidence": 1.0}
+    return {
+        "matched_item": mapping.matched_item,
+        "method": "Learned",
+        "confidence": 1.0,
+        "times_used": mapping.times_used or 0,
+    }
 
 
 def _match_by_item_code(text: str) -> Optional[Dict]:
