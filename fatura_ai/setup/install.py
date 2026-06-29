@@ -59,13 +59,23 @@ def _create_desktop_icon():
     if frappe.db.exists("Desktop Icon", {"app": "fatura_ai"}):
         return
     try:
+        svg_path = frappe.get_app_path("fatura_ai", "public", "images", "fatura-ai.svg")
+        with open(svg_path, "rb") as f:
+            file_doc = frappe.get_doc({
+                "doctype": "File",
+                "file_name": "fatura-ai.svg",
+                "content": f.read(),
+                "is_private": 0,
+            })
+            file_doc.insert(ignore_permissions=True)
+
         frappe.get_doc({
             "doctype": "Desktop Icon",
             "app": "fatura_ai",
             "icon_type": "Link",
             "link_type": "External",
             "link": "/app/fatura-ai",
-            "logo_url": "/assets/fatura_ai/images/fatura-ai.svg",
+            "logo_url": file_doc.file_url,
             "label": "Fatura AI",
             "standard": 1,
             "hidden": 0,

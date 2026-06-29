@@ -1,14 +1,1 @@
-[
- {
-  "app": "fatura_ai",
-  "bg_color": "blue",
-  "doctype": "Desktop Icon",
-  "hidden": 0,
-  "icon_type": "Link",
-  "label": "Fatura AI",
-  "link": "/app/fatura-ai",
-  "link_type": "External",
-  "logo_url": "/assets/fatura_ai/images/fatura-ai.svg",
-  "standard": 1
- }
-]
+[]
