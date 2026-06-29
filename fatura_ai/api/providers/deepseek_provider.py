@@ -68,7 +68,12 @@ class DeepSeekProvider(BaseProvider):
             ],
             temperature=0.0,
         )
-        return self._parse_json(response.choices[0].message.content)
+        result = self._parse_json(response.choices[0].message.content)
+        result["_usage"] = {
+            "input_tokens": response.usage.prompt_tokens,
+            "output_tokens": response.usage.completion_tokens,
+        }
+        return result
 
     def _parse_json(self, content: str) -> Dict[str, Any]:
         """Strip markdown fences and parse JSON."""

@@ -40,7 +40,9 @@ class GoogleProvider(BaseProvider):
             {"mime_type": mime_type, "data": file_bytes},
             prompt,
         ])
-        return self._parse_json_response(response.text)
+        result = self._parse_json_response(response.text)
+        self._attach_usage(result, response)
+        return result
 
     def _extract_pdf(self, file_url: str) -> Dict[str, Any]:
         file_doc = frappe.get_doc("File", {"file_url": file_url})
@@ -76,7 +78,9 @@ class GoogleProvider(BaseProvider):
                 }
             })
         response = model.generate_content({"parts": parts})
-        return self._parse_json_response(response.text)
+        result = self._parse_json_response(response.text)
+        self._attach_usage(result, response)
+        return result
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -108,3 +112,13 @@ class GoogleProvider(BaseProvider):
             if content.startswith("json"):
                 content = content[4:].strip()
         return json.loads(content)
+
+    def _attach_usage(self, result: dict, response) -> None:
+        try:
+            um = response.usage_metadata
+            result["_usage"] = {
+                "input_tokens": um.prompt_token_count,
+                "output_tokens": um.candidates_token_count,
+            }
+        except Exception:
+            pass

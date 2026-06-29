@@ -26,8 +26,11 @@
   "items_count",
   "items_matched",
   "column_break_items",
-  "processing_time",
-  "section_break_data",
+   "processing_time",
+   "cost",
+   "tokens_input",
+   "tokens_output",
+   "section_break_data",
   "extracted_json",
   "section_break_error",
   "error_message"
@@ -145,11 +148,29 @@
    "fieldname": "column_break_items",
    "fieldtype": "Column Break"
   },
-  {
-   "fieldname": "processing_time",
-   "fieldtype": "Float",
-   "label": "Processing Time (s)"
-  },
+   {
+    "fieldname": "processing_time",
+    "fieldtype": "Float",
+    "label": "Processing Time (s)"
+   },
+   {
+    "fieldname": "cost",
+    "fieldtype": "Currency",
+    "label": "API Cost",
+    "read_only": 1
+   },
+   {
+    "fieldname": "tokens_input",
+    "fieldtype": "Int",
+    "label": "Input Tokens",
+    "read_only": 1
+   },
+   {
+    "fieldname": "tokens_output",
+    "fieldtype": "Int",
+    "label": "Output Tokens",
+    "read_only": 1
+   },
   {
    "fieldname": "section_break_data",
    "fieldtype": "Section Break",

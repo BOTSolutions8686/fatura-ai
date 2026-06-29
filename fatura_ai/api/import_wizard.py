@@ -177,6 +177,9 @@ def run_ai_extraction(log_name, file_path=None):
 
     log.extracted_json = frappe.as_json(result)
     log.provider_used = result.get("provider")
+
+    _save_token_usage(log, result)
+
     log.status = "Extracted"
     log.save(ignore_permissions=True)
     frappe.db.commit()
@@ -670,3 +673,23 @@ def _merge_qr_data(result: dict, file_path: str, file_url: str) -> dict:
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Fatura AI ZATCA QR")
     return result
+
+
+def _save_token_usage(log, result):
+    usage = result.pop("_usage", None)
+    if not usage:
+        return
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    log.tokens_input = input_tokens
+    log.tokens_output = output_tokens
+
+    from fatura_ai.constants import PROVIDER_PRICING
+    provider_name = result.get("provider", "")
+    for key in PROVIDER_PRICING:
+        if key in provider_name:
+            pricing = PROVIDER_PRICING[key]
+            cost = (input_tokens / 1_000_000 * pricing["input"]
+                    + output_tokens / 1_000_000 * pricing["output"])
+            log.cost = round(cost, 6)
+            break
