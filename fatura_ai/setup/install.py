@@ -97,10 +97,11 @@ def _create_workspace_sidebar():
             "app": "fatura_ai",
             "standard": 1,
             "items": [
-                {"title": "Settings", "link": "Fatura AI Settings", "type": "Link"},
-                {"title": "Import Logs", "link": "Fatura Import Log", "type": "Link"},
-                {"title": "Item Mappings", "link": "Invoice AI Item Map", "type": "Link"},
-                {"title": "Supplier Templates", "link": "Supplier Invoice Template", "type": "Link"},
+                {"label": "Fatura AI", "link_type": "Workspace", "link_to": "Fatura AI", "type": "Link"},
+                {"label": "Settings", "link_type": "DocType", "link_to": "Fatura AI Settings", "type": "Link"},
+                {"label": "Import Logs", "link_type": "DocType", "link_to": "Fatura Import Log", "type": "Link"},
+                {"label": "Item Mappings", "link_type": "DocType", "link_to": "Invoice AI Item Map", "type": "Link"},
+                {"label": "Supplier Templates", "link_type": "DocType", "link_to": "Supplier Invoice Template", "type": "Link"},
             ],
         }).insert(ignore_permissions=True)
         frappe.db.commit()

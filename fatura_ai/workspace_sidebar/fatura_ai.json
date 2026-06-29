@@ -1,6 +1,6 @@
 {
  "app": "fatura_ai",
- "creation": "2026-06-29 20:38:00.051235",
+ "creation": "2026-06-29 20:41:31.698186",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "idx": 0,
@@ -10,6 +10,19 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Fatura AI",
+   "link_to": "Fatura AI",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_to": "Fatura AI Settings",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -19,6 +32,8 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Import Logs",
+   "link_to": "Fatura Import Log",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -28,6 +43,8 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Item Mappings",
+   "link_to": "Invoice AI Item Map",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -37,12 +54,14 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Supplier Templates",
+   "link_to": "Supplier Invoice Template",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-06-29 20:38:00.051235",
+ "modified": "2026-06-29 20:41:31.698186",
  "modified_by": "Administrator",
  "name": "Fatura AI",
  "owner": "Administrator",
