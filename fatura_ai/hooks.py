@@ -2,8 +2,8 @@ app_name = "fatura_ai"
 app_title = "Fatura AI"
 app_publisher = "BOT Solutions"
 app_description = "AI-powered supplier invoice import for ERPNext — Saudi market"
-app_icon = "octicon octicon-file-text"
-app_color = "#1A73E8"
+app_icon = "assets/fatura_ai/images/fatura-ai.svg"
+app_color = "#6B63FF"
 app_email = "info@botsolutions.tech"
 app_license = "MIT"
 app_version = "1.0.0"
@@ -29,4 +29,6 @@ after_install = ["fatura_ai.setup.install.after_install"]
 # Fixtures installed with the app
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Fatura AI"]]},
+    {"dt": "Workspace", "filters": [["module", "=", "Fatura AI"]]},
+    {"dt": "Number Card", "filters": [["module", "=", "Fatura AI"]]},
 ]

@@ -3,4 +3,5 @@ recursive-include fatura_ai *.js
 recursive-include fatura_ai *.css
 recursive-include fatura_ai *.html
 recursive-include fatura_ai *.txt
+recursive-include fatura_ai *.svg
 include requirements.txt
