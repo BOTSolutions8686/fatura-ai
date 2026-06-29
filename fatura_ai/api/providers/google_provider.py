@@ -19,15 +19,22 @@ class GoogleProvider(BaseProvider):
         genai.configure(api_key=api_key)
 
     def _build_extraction_prompt(self) -> str:
-        return (
-            "You are an invoice data extraction assistant. "
-            "Extract the following fields from the invoice image/PDF below and return them "
-            "as a JSON object with these keys:\n"
-            "vendor_name, vat_number, invoice_number, invoice_date, "
-            "line_items (list of dicts with keys: description, qty, unit_price, amount), "
-            "subtotal, vat_amount, total.\n\n"
-            "Return ONLY valid JSON, no extra text."
+        prompt_path = frappe.get_app_path(
+            "fatura_ai", "templates", "prompts", "extraction_prompt.txt"
         )
+        try:
+            with open(prompt_path) as f:
+                return f.read()
+        except Exception:
+            return (
+                "You are an invoice data extraction assistant. "
+                "Extract the following fields from the invoice and return them "
+                "as a JSON object with these keys:\n"
+                "vendor_name, vat_number, invoice_number, invoice_date, "
+                "line_items (list of dicts with keys: item_name, description, qty, uom, unit_price, amount), "
+                "subtotal, vat_amount, total, currency.\n\n"
+                "Return ONLY valid JSON, no extra text."
+            )
 
     def extract_invoice(self, file_url: str) -> Dict[str, Any]:
         ext = file_url.lower().rsplit(".", 1)[-1] if "." in file_url else ""
