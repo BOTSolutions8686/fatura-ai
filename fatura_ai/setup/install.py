@@ -6,6 +6,7 @@ from frappe import _
 
 def after_install():
     _check_system_dependencies()
+    _create_workspace_sidebar()
     _create_desktop_icon()
 
 
@@ -73,13 +74,34 @@ def _create_desktop_icon():
             "doctype": "Desktop Icon",
             "app": "fatura_ai",
             "icon_type": "Link",
-            "link_type": "External",
-            "link": "/app/fatura-ai",
+            "link_type": "Workspace Sidebar",
+            "link_to": "Fatura AI",
             "logo_url": file_doc.file_url,
             "label": "Fatura AI",
             "standard": 1,
             "hidden": 0,
             "bg_color": "blue",
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
+
+
+def _create_workspace_sidebar():
+    if frappe.db.exists("Workspace Sidebar", {"app": "fatura_ai"}):
+        return
+    try:
+        frappe.get_doc({
+            "doctype": "Workspace Sidebar",
+            "title": "Fatura AI",
+            "app": "fatura_ai",
+            "standard": 1,
+            "items": [
+                {"title": "Settings", "link": "Fatura AI Settings", "type": "Link"},
+                {"title": "Import Logs", "link": "Fatura Import Log", "type": "Link"},
+                {"title": "Item Mappings", "link": "Invoice AI Item Map", "type": "Link"},
+                {"title": "Supplier Templates", "link": "Supplier Invoice Template", "type": "Link"},
+            ],
         }).insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception:

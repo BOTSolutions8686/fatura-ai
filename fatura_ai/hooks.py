@@ -40,6 +40,7 @@ after_install = ["fatura_ai.setup.install.after_install"]
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Fatura AI"]]},
     {"dt": "Workspace", "filters": [["module", "=", "Fatura AI"]]},
+    {"dt": "Workspace Sidebar", "filters": [["app", "=", "fatura_ai"]]},
     {"dt": "Number Card", "filters": [["module", "=", "Fatura AI"]]},
     {"dt": "Desktop Icon", "filters": [["app", "=", "fatura_ai"]]},
 ]
