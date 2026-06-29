@@ -8,6 +8,16 @@ app_email = "info@botsolutions.tech"
 app_license = "MIT"
 app_version = "1.0.0"
 
+# Apps screen (v16 desktop — big icon cards)
+add_to_apps_screen = [
+    {
+        "app_name": "fatura_ai",
+        "title": "Fatura AI",
+        "icon": "assets/fatura_ai/images/fatura-ai.svg",
+        "route": "/app/fatura-ai",
+    },
+]
+
 # DocType-specific JS injected on form load
 doctype_js = {
     "Purchase Invoice": "public/js/purchase_invoice.js",
