@@ -12,15 +12,27 @@
   "section_break_anthropic",
   "anthropic_api_key",
   "anthropic_model",
+  "test_anthropic_key",
+  "anthropic_status",
   "section_break_openai",
   "openai_api_key",
   "openai_model",
+  "test_openai_key",
+  "openai_status",
   "section_break_google",
   "google_api_key",
   "google_model",
+  "test_google_key",
+  "google_status",
   "section_break_deepseek",
   "deepseek_api_key",
   "deepseek_model",
+  "test_deepseek_key",
+  "deepseek_status",
+  "section_break_tesseract",
+  "test_tesseract",
+  "tesseract_status",
+  "tesseract_languages",
   "section_break_matching",
   "fuzzy_match_threshold",
   "column_break_2",
@@ -67,6 +79,19 @@
    "label": "Anthropic Model"
   },
   {
+   "fieldname": "test_anthropic_key",
+   "fieldtype": "Button",
+   "label": "Test Anthropic Key",
+   "depends_on": "eval:doc.anthropic_api_key"
+  },
+  {
+   "fieldname": "anthropic_status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1,
+   "depends_on": "eval:doc.anthropic_api_key"
+  },
+  {
    "fieldname": "section_break_openai",
    "fieldtype": "Section Break",
    "label": "OpenAI"
@@ -81,6 +106,19 @@
    "fieldname": "openai_model",
    "fieldtype": "Data",
    "label": "OpenAI Model"
+  },
+  {
+   "fieldname": "test_openai_key",
+   "fieldtype": "Button",
+   "label": "Test OpenAI Key",
+   "depends_on": "eval:doc.openai_api_key"
+  },
+  {
+   "fieldname": "openai_status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1,
+   "depends_on": "eval:doc.openai_api_key"
   },
   {
    "fieldname": "section_break_google",
@@ -99,6 +137,19 @@
    "label": "Google Model"
   },
   {
+   "fieldname": "test_google_key",
+   "fieldtype": "Button",
+   "label": "Test Google Key",
+   "depends_on": "eval:doc.google_api_key"
+  },
+  {
+   "fieldname": "google_status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1,
+   "depends_on": "eval:doc.google_api_key"
+  },
+  {
    "fieldname": "section_break_deepseek",
    "fieldtype": "Section Break",
    "label": "DeepSeek"
@@ -114,6 +165,41 @@
    "fieldname": "deepseek_model",
    "fieldtype": "Data",
    "label": "DeepSeek Model"
+  },
+  {
+   "fieldname": "test_deepseek_key",
+   "fieldtype": "Button",
+   "label": "Test DeepSeek Key",
+   "depends_on": "eval:doc.deepseek_api_key"
+  },
+  {
+   "fieldname": "deepseek_status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1,
+   "depends_on": "eval:doc.deepseek_api_key"
+  },
+  {
+   "fieldname": "section_break_tesseract",
+   "fieldtype": "Section Break",
+   "label": "OCR (Tesseract)"
+  },
+  {
+   "fieldname": "test_tesseract",
+   "fieldtype": "Button",
+   "label": "Check Tesseract OCR Status"
+  },
+  {
+   "fieldname": "tesseract_status",
+   "fieldtype": "Data",
+   "label": "Tesseract Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tesseract_languages",
+   "fieldtype": "Small Text",
+   "label": "Available Languages",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_matching",

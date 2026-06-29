@@ -31,13 +31,25 @@ def extract_text_with_ocr(file_path: str) -> str:
     """
     try:
         import pytesseract
-    except ImportError:
+        from pdf2image import convert_from_path
+    except ImportError as exc:
         frappe.logger().warning(
-            "Fatura AI T044: pytesseract not installed; OCR unavailable"
+            "Fatura AI T044: %s not installed; OCR unavailable", str(exc)
         )
         return ""
 
-
+    try:
+        images = convert_from_path(file_path, dpi=200)
+        page_texts = []
+        for img in images:
+            text = pytesseract.image_to_string(img, lang="ara+eng")
+            page_texts.append(text)
+        return "\n".join(page_texts)
+    except Exception as exc:
+        frappe.logger().warning(
+            "Fatura AI T044: OCR extraction failed: %s", str(exc)
+        )
+        return ""
 
 
 def check_image_quality(file_path: str) -> dict:
@@ -74,16 +86,3 @@ def check_image_quality(file_path: str) -> dict:
             "Fatura AI T045: image quality check failed: %s", str(exc)
         )
         return {"dpi": 0, "quality": "low", "warning": frappe._("Could not determine image resolution.")}
-
-    try:
-        images = convert_from_path(file_path, dpi=200)
-        page_texts = []
-        for img in images:
-            text = pytesseract.image_to_string(img, lang="ara+eng")
-            page_texts.append(text)
-        return "\n".join(page_texts)
-    except Exception as exc:
-        frappe.logger().warning(
-            "Fatura AI T044: OCR extraction failed: %s", str(exc)
-        )
-        return ""

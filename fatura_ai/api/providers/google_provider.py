@@ -1,10 +1,13 @@
 """Google Gemini Flash provider — tertiary provider, lowest cost."""
 import base64
 import json
+import os
+import tempfile
 import frappe
 from frappe import _
 from typing import Dict, Any, List
 import google.generativeai as genai
+from pdf2image import convert_from_path
 from fatura_ai.api.providers.base_provider import BaseProvider
 
 
@@ -27,16 +30,35 @@ class GoogleProvider(BaseProvider):
         )
 
     def extract_invoice(self, file_url: str) -> Dict[str, Any]:
+        ext = file_url.lower().rsplit(".", 1)[-1] if "." in file_url else ""
+        if ext == "pdf":
+            return self._extract_pdf(file_url)
         file_bytes, mime_type = self._load_file_bytes(file_url)
         model = genai.GenerativeModel(self.model)
         prompt = self._build_extraction_prompt()
-        response = model.generate_content(
-            [
-                {"mime_type": mime_type, "data": file_bytes},
-                prompt,
-            ]
-        )
+        response = model.generate_content([
+            {"mime_type": mime_type, "data": file_bytes},
+            prompt,
+        ])
         return self._parse_json_response(response.text)
+
+    def _extract_pdf(self, file_url: str) -> Dict[str, Any]:
+        file_doc = frappe.get_doc("File", {"file_url": file_url})
+        local_path = file_doc.get_full_path()
+        images = convert_from_path(local_path, dpi=200)
+        image_paths = []
+        for img in images:
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            img.save(tmp.name, "JPEG")
+            image_paths.append(tmp.name)
+        try:
+            return self.extract_invoice_from_image(image_paths)
+        finally:
+            for p in image_paths:
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
 
     def extract_invoice_from_image(self, image_paths: List[str]) -> Dict[str, Any]:
         """Send one or more image files to Gemini Vision and return parsed JSON."""

@@ -129,19 +129,38 @@ def run_ai_extraction(log_name, file_path=None):
     else:
         extraction_url = log.file_url
 
+    # ── Step 0: Scan ZATCA QR code FIRST (ground truth) ──────────────────
+    qr_result = _scan_qr_first(file_path, log.file_url)
+
+    # ── Step 1: AI extraction ──────────────────────────────────────────
     try:
         from fatura_ai.helpers.ai_extraction import extract_invoice_data
         result = extract_invoice_data(extraction_url)
     except Exception as e:
-        log.mark_failed(str(e))
-        frappe.db.commit()
-        frappe.throw(
-            _("AI extraction failed: {0}").format(str(e)),
-            frappe.ValidationError,
-        )
+        if qr_result:
+            # QR data available → partial success, continue with QR fields
+            result = qr_result
+            result["qr_data_found"] = True
+            result["provider"] = "QR (AI extraction failed)"
+            frappe.logger().warning(
+                "Fatura AI: extraction failed but QR data available: %s", str(e)
+            )
+        else:
+            log.mark_failed(str(e))
+            frappe.db.commit()
+            frappe.throw(
+                _("AI extraction failed: {0}").format(str(e)),
+                frappe.ValidationError,
+            )
 
-    # T039 — merge ZATCA QR data (ground truth) over AI result
-    result = _merge_qr_data(result, file_path, log.file_url)
+    # Merge QR data over AI result (QR is ground truth)
+    if qr_result:
+        for key, value in qr_result.items():
+            if value and key not in ("provider", "qr_data_found"):
+                result[key] = value
+        result["qr_data_found"] = True
+        result["vat_source"] = "QR" if qr_result.get("vat_number") else "AI"
+        result["name_source"] = "QR" if qr_result.get("seller_name") else "AI"
 
     # Set pdf_type for image files
     if is_image:
@@ -190,7 +209,14 @@ def match_supplier(log_name, vendor_name=None, tax_id=None):
             )
 
         if not vendor_name and not tax_id:
-            return {"status": "error", "message": _("Cannot match supplier: no name or VAT in extracted data")}
+            return {
+                "supplier": None,
+                "supplier_name": None,
+                "method": "None",
+                "confidence": 0.0,
+                "tax_id": None,
+                "vendor_name": None,
+            }
 
         vat_source = extracted.get("vat_source", "AI")
         name_source = extracted.get("name_source", "AI")
@@ -603,9 +629,27 @@ def _detect_file_type(file_url: str) -> str:
     return "pdf"
 
 
+def _scan_qr_first(file_path: str, file_url: str) -> dict:
+    """Scan for ZATCA QR code and return extracted fields, or None."""
+    if not file_url or not file_path:
+        return None
+    try:
+        from fatura_ai.helpers.zatca_qr import extract_zatca_qr
+        qr_data = extract_zatca_qr(file_path)
+        if qr_data:
+            frappe.logger().info(
+                "Fatura AI QR found: vat=%s seller=%s",
+                qr_data.get("vat_number"), qr_data.get("seller_name"),
+            )
+            return qr_data
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Fatura AI ZATCA QR")
+    return None
+
+
 def _merge_qr_data(result: dict, file_path: str, file_url: str) -> dict:
     """T039 — overlay ZATCA QR ground-truth fields onto AI extraction result."""
-    if not file_url or not file_url.lower().endswith(".pdf"):
+    if not file_url or not file_path:
         return result
     try:
         from fatura_ai.helpers.zatca_qr import extract_zatca_qr

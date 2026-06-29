@@ -17,28 +17,47 @@ _TLV_TAGS = {
 }
 
 
-def extract_zatca_qr(pdf_path: str) -> Optional[dict]:
+def extract_zatca_qr(file_path: str) -> Optional[dict]:
     """
-    Scan up to the first 3 pages of a PDF for a ZATCA TLV QR code.
+    Scan a PDF or image file for a ZATCA TLV QR code.
     Returns decoded fields dict, or None if no QR found or libs unavailable.
     """
     try:
         from pyzbar.pyzbar import decode as pyzbar_decode
-        from pdf2image import convert_from_path
     except ImportError:
-        frappe.logger().warning("Fatura AI: pyzbar/pdf2image not installed — ZATCA QR skipped")
+        frappe.log_error(
+            "pyzbar not installed. Run: pip install pyzbar && apt-get install libzbar0",
+            "Fatura AI QR",
+        )
         return None
 
-    try:
-        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=3)
-    except Exception as exc:
-        frappe.logger().warning("Fatura AI: pdf2image conversion failed: %s", str(exc))
+    images = _file_to_images(file_path)
+    if not images:
         return None
 
     for img in images:
         result = _scan_image(img, pyzbar_decode)
         if result:
             return result
+    return None
+
+
+def _file_to_images(file_path: str):
+    ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
+    if ext in ("png", "jpg", "jpeg", "webp", "tiff", "tif"):
+        try:
+            from PIL import Image
+            return [Image.open(file_path)]
+        except Exception as exc:
+            frappe.logger().warning("Fatura AI: image open failed: %s", str(exc))
+            return None
+    try:
+        from pdf2image import convert_from_path
+        return convert_from_path(file_path, dpi=200, first_page=1, last_page=3)
+    except ImportError:
+        frappe.logger().warning("Fatura AI: pdf2image not installed — ZATCA QR skipped for PDFs")
+    except Exception as exc:
+        frappe.logger().warning("Fatura AI: pdf2image conversion failed: %s", str(exc))
     return None
 
 

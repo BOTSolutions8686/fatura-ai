@@ -57,18 +57,14 @@ Upload a supplier invoice PDF and let Fatura AI do the heavy lifting:
 
 **System packages (Ubuntu/Debian):**
 ```bash
-sudo apt-get install -y poppler-utils libzbar0
+sudo apt-get install -y poppler-utils libzbar0 tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng
 ```
 
-**Python packages:**
-```
-pyzbar
-pdf2image
-pdfminer.six
-fuzzywuzzy
-python-levenshtein
-rapidfuzz
-```
+| Package | Purpose | Required For |
+|---|---|---|
+| `poppler-utils` | PDF to image conversion | PDF processing, QR scanning |
+| `libzbar0` | QR/barcode decoding | ZATCA QR code reading |
+| `tesseract-ocr` + `ara`/`eng` | OCR text extraction | Scanned/image-based PDFs |
 
 **AI provider API key** — at least one of:
 - DeepSeek (recommended for cost): https://platform.deepseek.com
@@ -86,12 +82,11 @@ bench get-app https://github.com/botsolutions-tech/fatura_ai
 bench --site your-site install-app fatura_ai
 bench --site your-site migrate
 
-# System dependencies
-sudo apt-get install -y poppler-utils libzbar0
-
-# Python dependencies
-pip install pyzbar pdf2image pdfminer.six fuzzywuzzy python-levenshtein rapidfuzz
+# System dependencies (REQUIRED for scanned PDFs and QR codes)
+sudo apt-get install -y poppler-utils libzbar0 tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng
 ```
+
+On app install, Fatura AI checks for these dependencies and shows a warning if any are missing.
 
 ---
 
