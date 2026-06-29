@@ -28,7 +28,7 @@ def _get_vision_provider() -> BaseProvider:
     if google_key:
         return GoogleProvider(
             api_key=google_key,
-            model=settings.google_model or "gemini-1.5-flash",
+            model=settings.google_model or "gemini-2.5-flash",
         )
     anthropic_key = settings.get_password("anthropic_api_key")
     if anthropic_key:
@@ -83,7 +83,7 @@ def _build_provider(provider_name: str, settings) -> BaseProvider:
     if provider_name == "Google":
         return GoogleProvider(
             api_key=settings.get_password("google_api_key"),
-            model=settings.google_model or "gemini-1.5-flash",
+            model=settings.google_model or "gemini-2.5-flash",
         )
     if provider_name == "Anthropic":
         from fatura_ai.api.providers.anthropic_provider import AnthropicProvider
