@@ -10,3 +10,8 @@ node_modules/
 tests/results/
 tests/invoices/
 .aider*
+
+# iCloud conflict copies
+*" 2"
+*" 2"/
+
