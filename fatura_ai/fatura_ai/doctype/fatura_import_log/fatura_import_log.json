@@ -155,8 +155,9 @@
    },
    {
     "fieldname": "cost",
-    "fieldtype": "Currency",
-    "label": "API Cost",
+    "fieldtype": "Float",
+    "label": "API Cost (USD)",
+    "precision": "6",
     "read_only": 1
    },
    {
