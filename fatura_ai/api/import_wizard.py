@@ -180,6 +180,8 @@ def run_ai_extraction(log_name, file_path=None):
 
     _save_token_usage(log, result)
 
+    _learn_template(file_path, result, log)
+
     log.status = "Extracted"
     log.save(ignore_permissions=True)
     frappe.db.commit()
@@ -697,3 +699,43 @@ def _save_token_usage(log, result):
                     + output_tokens / 1_000_000 * pricing["output"])
             log.cost = round(cost, 6)
             break
+
+
+def _learn_template(file_path, result, log):
+    supplier = log.matched_supplier or result.get("vendor_name")
+    if not supplier or not file_path:
+        return
+
+    try:
+        from fatura_ai.helpers.layout_hasher import compute_layout_hash
+        layout_hash = compute_layout_hash(file_path)
+        if not layout_hash:
+            return
+
+        from fatura_ai.fatura_ai.doctype.supplier_invoice_template.supplier_invoice_template import SupplierInvoiceTemplate
+
+        existing = SupplierInvoiceTemplate.find_template(supplier, layout_hash)
+        if existing:
+            doc = frappe.get_doc("Supplier Invoice Template", existing)
+            doc.record_usage()
+        else:
+            similar = SupplierInvoiceTemplate.find_similar(supplier, layout_hash)
+            if similar:
+                doc = frappe.get_doc("Supplier Invoice Template", similar.name)
+                doc.layout_hash = layout_hash
+                doc.samples_count = 1
+                doc.last_used = frappe.utils.today()
+                doc.save(ignore_permissions=True)
+            else:
+                frappe.get_doc({
+                    "doctype": "Supplier Invoice Template",
+                    "supplier": supplier,
+                    "layout_hash": layout_hash,
+                    "samples_count": 1,
+                    "last_used": frappe.utils.today(),
+                    "confidence": 0.5,
+                }).insert(ignore_permissions=True)
+
+        result["layout_hash"] = layout_hash
+    except Exception:
+        pass

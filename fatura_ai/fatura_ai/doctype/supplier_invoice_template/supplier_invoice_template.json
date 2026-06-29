@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "autoname": "format:SIT-{supplier}-{layout_hash:.10}",
+ "creation": "2026-06-29 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier",
+  "layout_hash",
+  "column_break_1",
+  "samples_count",
+  "last_used",
+  "confidence",
+  "section_break_fields",
+  "field_positions"
+ ],
+ "fields": [
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Supplier",
+   "options": "Supplier",
+   "reqd": 1
+  },
+  {
+   "fieldname": "layout_hash",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Layout Hash",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "samples_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Samples"
+  },
+  {
+   "fieldname": "last_used",
+   "fieldtype": "Date",
+   "label": "Last Used"
+  },
+  {
+   "default": "0.0",
+   "fieldname": "confidence",
+   "fieldtype": "Float",
+   "label": "Confidence (0–1)"
+  },
+  {
+   "fieldname": "section_break_fields",
+   "fieldtype": "Section Break",
+   "label": "Field Positions"
+  },
+  {
+   "fieldname": "field_positions",
+   "fieldtype": "Code",
+   "label": "Field Positions (JSON)",
+   "options": "JSON"
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fatura AI",
+ "name": "Supplier Invoice Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
