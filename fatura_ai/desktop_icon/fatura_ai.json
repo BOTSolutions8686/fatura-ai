@@ -1,0 +1,21 @@
+{
+ "app": "fatura_ai",
+ "bg_color": "blue",
+ "creation": "2026-06-29 20:34:10.927746",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Fatura AI",
+ "link": "/app/fatura-ai",
+ "link_type": "External",
+ "logo_url": "/assets/fatura_ai/images/fatura-ai.svg",
+ "modified": "2026-06-29 20:34:10.927746",
+ "modified_by": "Administrator",
+ "name": "Fatura AI",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}

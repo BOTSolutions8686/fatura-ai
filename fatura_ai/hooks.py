@@ -41,4 +41,5 @@ fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Fatura AI"]]},
     {"dt": "Workspace", "filters": [["module", "=", "Fatura AI"]]},
     {"dt": "Number Card", "filters": [["module", "=", "Fatura AI"]]},
+    {"dt": "Desktop Icon", "filters": [["app", "=", "fatura_ai"]]},
 ]

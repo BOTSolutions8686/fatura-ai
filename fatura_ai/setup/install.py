@@ -6,6 +6,7 @@ from frappe import _
 
 def after_install():
     _check_system_dependencies()
+    _create_desktop_icon()
 
 
 def _check_system_dependencies():
@@ -52,3 +53,24 @@ def _show_missing_deps_dialog(missing):
         title=_("Fatura AI — Missing System Packages"),
         indicator="orange",
     )
+
+
+def _create_desktop_icon():
+    if frappe.db.exists("Desktop Icon", {"app": "fatura_ai"}):
+        return
+    try:
+        frappe.get_doc({
+            "doctype": "Desktop Icon",
+            "app": "fatura_ai",
+            "icon_type": "Link",
+            "link_type": "External",
+            "link": "/app/fatura-ai",
+            "logo_url": "/assets/fatura_ai/images/fatura-ai.svg",
+            "label": "Fatura AI",
+            "standard": 1,
+            "hidden": 0,
+            "bg_color": "blue",
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
