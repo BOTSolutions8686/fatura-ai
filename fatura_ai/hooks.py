@@ -6,7 +6,7 @@ app_icon = "assets/fatura_ai/images/fatura-ai.svg"
 app_color = "#6B63FF"
 app_email = "info@botsolutions.tech"
 app_license = "MIT"
-app_version = "1.0.0"
+app_version = "1.1.0"
 
 # Apps screen (v16 desktop — big icon cards)
 add_to_apps_screen = [
